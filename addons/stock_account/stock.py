@@ -192,6 +192,7 @@ class stock_picking(osv.osv):
         moves = [x.id for x in pick.move_lines]
         move_obj= self.pool.get("stock.move")
         move_obj.write(cr, uid, moves, {'invoice_state': pick.invoice_state})
+        move_obj.write(cr, uid, moves, {'invoice_state': pick.invoice_state}, context=context)
 
     _columns = {
         'invoice_state': fields.function(__get_invoice_state, type='selection', selection=[

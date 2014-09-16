@@ -189,6 +189,7 @@ class stock_landed_cost(osv.osv):
                 for line in cost.cost_lines:
                     v.update({'cost_id': cost.id, 'cost_line_id': line.id})
                     self.pool.get('stock.valuation.adjustment.lines').create(cr, uid, v, context=context)
+<<<<<<< HEAD
                 if line.split_method == 'by_quantity':
                     total_qty += v.get('quantity', 0.0)
                 elif line.split_method == 'by_current_cost_price':
@@ -199,6 +200,14 @@ class stock_landed_cost(osv.osv):
                     total_volume += v.get('volume', 0.0)
                 else:
                     total_line += 1
+=======
+                total_qty += v.get('quantity', 0.0)
+                total_cost += v.get('former_cost', 0.0)
+                total_weight += v.get('weight', 0.0)
+                total_volume += v.get('volume', 0.0)
+                total_line += 1
+
+>>>>>>> 8.0-wmsstaging9-jco
             for line in cost.cost_lines:
                 for valuation in cost.valuation_adjustment_lines:
                     value = 0.0
