@@ -35,7 +35,27 @@ class StockMove(osv.osv):
         new_moves = super(StockMove, self).create_chained_picking(cr, uid, moves, context=context)
         self.write(cr, uid, [x.id for x in new_moves], {'production_id': False}, context=context)
         return new_moves
-    
+
+    def _prepare_explode_move(self, cr, uid, move, line, context=None):
+        if move.state == 'assigned':
+            state = 'assigned'
+        else:
+            state = 'confirmed'
+        return {
+            'picking_id': move.picking_id.id,
+            'product_id': line['product_id'],
+            'product_uom': line['product_uom'],
+            'product_qty': line['product_qty'],
+            'product_uos': line['product_uos'],
+            'product_uos_qty': line['product_uos_qty'],
+            'move_dest_id': move.id,
+            'state': state,
+            'name': line['name'],
+            'move_history_ids': [(6,0,[move.id])],
+            'move_history_ids2': [(6,0,[])],
+            'procurements': [],
+        }
+
     def _action_explode(self, cr, uid, move, context=None):
         """ Explodes pickings.
         @param move: Stock moves
@@ -56,24 +76,9 @@ class StockMove(osv.osv):
                 factor = move.product_qty
                 bom_point = bom_obj.browse(cr, uid, bis[0], context=context)
                 res = bom_obj._bom_explode(cr, uid, bom_point, factor, [])
-                state = 'confirmed'
-                if move.state == 'assigned':
-                    state = 'assigned'
-                for line in res[0]: 
-                    valdef = {
-                        'picking_id': move.picking_id.id,
-                        'product_id': line['product_id'],
-                        'product_uom': line['product_uom'],
-                        'product_qty': line['product_qty'],
-                        'product_uos': line['product_uos'],
-                        'product_uos_qty': line['product_uos_qty'],
-                        'move_dest_id': move.id,
-                        'state': state,
-                        'name': line['name'],
-                        'move_history_ids': [(6,0,[move.id])],
-                        'move_history_ids2': [(6,0,[])],
-                        'procurements': [],
-                    }
+                for line in res[0]:
+                    valdef = self._prepare_explode_move(
+                        cr, uid, move, line, context=context)
                     mid = move_obj.copy(cr, uid, move.id, default=valdef)
                     processed_ids.append(mid)
                     prodobj = product_obj.browse(cr, uid, line['product_id'], context=context)
@@ -97,7 +102,7 @@ class StockMove(osv.osv):
                     'picking_id': False,
                     'state': 'confirmed'
                 })
-                for m in procurement_obj.search(cr, uid, [('move_id','=',move.id)], context):
+                for m in procurement_obj.search(cr, uid, [('move_id','=',move.id)], context=context):
                     wf_service.trg_validate(uid, 'procurement.order', m, 'button_confirm', cr)
                     wf_service.trg_validate(uid, 'procurement.order', m, 'button_wait_done', cr)
         return processed_ids
