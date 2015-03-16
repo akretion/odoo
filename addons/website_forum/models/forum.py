@@ -148,9 +148,8 @@ class Forum(models.Model):
 
     @api.model
     def _tag_to_write_vals(self, tags=''):
-        User = self.env['res.users']
         Tag = self.env['forum.tag']
-        user = User.sudo().browse(self._uid)
+        user = self.env.user
         post_tags = []
         existing_keep = []
         unaccent = get_unaccent_wrapper(self._cr)
@@ -724,9 +723,22 @@ class Tags(models.Model):
     post_ids = fields.Many2many('forum.post', 'forum_tag_rel', 'forum_tag_id', 'forum_id', string='Posts')
     posts_count = fields.Integer('Number of Posts', compute='_get_posts_count', store=True)
 
-    _constraints = [(models.Model._check_unique_accent, _('Error! Tag name already exists.'), ['name'])]
+    @api.one
+    @api.constrains('name')
+    def _check_unique_name(self):
+        return self._check_unique_accent()
+
     @api.multi
     @api.depends("post_ids.tag_ids")
     def _get_posts_count(self):
         for tag in self:
             tag.posts_count = len(tag.post_ids)
+
+    def copy_data(self, cr, uid, id, default=None, context=None):
+        if default is None:
+            default = {}
+        if not default.get('name'):
+            current = self.browse(cr, uid, id, context=context)
+            default['name'] = _("%s (copy)") % current.name
+        return super(Tags, self).copy_data(cr, uid, id, default, context)
+

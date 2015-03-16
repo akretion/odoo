@@ -47,7 +47,15 @@ class note_tag(osv.osv):
     _columns = {
         'name' : fields.char('Tag Name', required=True),
     }
-    _constraints = [(osv.osv._check_unique_accent, _('Error! Tag name already exists.'), ['name'])]
+    _constraints = [(osv.osv._check_unique, _('Error! Tag name already exists.'), ['name'])]
+
+    def copy_data(self, cr, uid, id, default=None, context=None):
+        if default is None:
+            default = {}
+        if not default.get('name'):
+            current = self.browse(cr, uid, id, context=context)
+            default['name'] = _("%s (copy)") % current.name
+        return super(note_tag, self).copy_data(cr, uid, id, default, context)
 
 class note_note(osv.osv):
     """ Note """

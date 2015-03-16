@@ -60,9 +60,15 @@ class hr_employee_category(osv.Model):
 
     _constraints = [
         (osv.osv._check_recursion, _('Error! You cannot create recursive category.'), ['parent_id']),
-        (osv.Model._check_unique_accent, _('Error! Tag name already exists.'), ['name'])
+        (osv.Model._check_unique, _('Error! Tag name already exists.'), ['name'])
     ]
-
+    def copy_data(self, cr, uid, id, default=None, context=None):
+        if default is None:
+            default = {}
+        if not default.get('name'):
+            current = self.browse(cr, uid, id, context=context)
+            default['name'] = _("%s (copy)") % current.name
+        return super(hr_employee_category, self).copy_data(cr, uid, id, default, context)
 
 class hr_job(osv.Model):
 
