@@ -672,6 +672,12 @@ instance.web_kanban.KanbanGroup = instance.web.Widget.extend({
         var $show_more = this.$records.find('.oe_kanban_show_more');
         var $cards = this.$records.find('.oe_kanban_column_cards');
 
+        if (records.length > 0 && records[0].hasOwnProperty('sequence')) {
+            records.sort(function(a, b) {
+                return a.sequence - b.sequence;
+            });
+        };
+
         _.each(records, function(record) {
             var rec = new instance.web_kanban.KanbanRecord(self, record);
             if (!prepend) {
