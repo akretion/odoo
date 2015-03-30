@@ -546,7 +546,7 @@ class product_product(osv.osv):
     _table = "product_product"
     _inherits = {'product.template': 'product_tmpl_id'}
     _inherit = ['mail.thread']
-    _order = 'default_code,name_template'
+    _order = 'default_code'#,name_template'
     _columns = {
         'qty_available': fields.function(_product_qty_available, type='float', string='Quantity On Hand'),
         'virtual_available': fields.function(_product_virtual_available, type='float', string='Quantity Available'),
@@ -565,11 +565,7 @@ class product_product(osv.osv):
         'price_extra': fields.float('Variant Price Extra', digits_compute=dp.get_precision('Product Price')),
         'price_margin': fields.float('Variant Price Margin', digits_compute=dp.get_precision('Product Price')),
         'pricelist_id': fields.dummy(string='Pricelist', relation='product.pricelist', type='many2one'),
-        'name_template': fields.related('product_tmpl_id', 'name', string="Template Name", type='char', size=128, store={
-            'product.template': (_get_name_template_ids, ['name'], 10),
-            'product.product': (lambda self, cr, uid, ids, c=None: ids, ['product_tmpl_id'], 10),
-
-            }, select=True),
+        'name_template': fields.related('product_tmpl_id', 'name', string="Template Name", type='char', size=128, select=True),
         'color': fields.integer('Color Index'),
         # image: all image fields are base64 encoded and PIL-supported
         'image': fields.binary("Image",
