@@ -96,6 +96,7 @@ class hr_holidays_status(osv.osv):
         'remaining_leaves': fields.function(_user_left_days, string='Remaining Leaves', help='Maximum Leaves Allowed - Leaves Already Taken', multi='user_left_days'),
         'virtual_remaining_leaves': fields.function(_user_left_days, string='Virtual Remaining Leaves', help='Maximum Leaves Allowed - Leaves Already Taken - Leaves Waiting Approval', multi='user_left_days'),
         'double_validation': fields.boolean('Apply Double Validation', help="When selected, the Allocation/Leave Requests for this type require a second validation to be approved."),
+        'company_id': fields.many2one('res.company', 'Company'),
     }
     _defaults = {
         'color_name': 'red',
@@ -245,6 +246,12 @@ class hr_holidays(osv.osv):
         ('date_check2', "CHECK ( (type='add') OR (date_from <= date_to))", "The start date must be anterior to the end date."),
         ('date_check', "CHECK ( number_of_days_temp >= 0 )", "The number of days must be greater than 0."),
     ]
+
+    def name_get(self, cr, uid, ids, context=None):
+        res = []
+        for leave in self.browse(cr, uid, ids, context=context):
+            res.append((leave.id, leave.name or _("%s on %s") % (leave.employee_id.name, leave.holiday_status_id.name)))
+        return res
 
     def _create_resource_leave(self, cr, uid, leaves, context=None):
         '''This method will create entry in resource calendar leave object at the time of holidays validated '''
@@ -409,7 +416,7 @@ class hr_holidays(osv.osv):
             if record.holiday_type == 'employee' and record.type == 'remove':
                 meeting_obj = self.pool.get('calendar.event')
                 meeting_vals = {
-                    'name': record.name or _('Leave Request'),
+                    'name': record.display_name,
                     'categ_ids': record.holiday_status_id.categ_id and [(6,0,[record.holiday_status_id.categ_id.id])] or [],
                     'duration': record.number_of_days_temp * 8,
                     'description': record.notes,
@@ -587,14 +594,16 @@ class hr_employee(osv.Model):
 
     def _leaves_count(self, cr, uid, ids, field_name, arg, context=None):
         res = {}
-        Holidays = self.pool['hr.holidays']
-        date_begin = date.today().replace(day=1)
-        date_end = date_begin.replace(day=calendar.monthrange(date_begin.year, date_begin.month)[1])
-        for employee_id in ids:
-            leaves = Holidays.search_count(cr, uid, [('employee_id', '=', employee_id), ('type', '=', 'remove')], context=context)
-            approved_leaves = Holidays.search_count(cr, uid, [('employee_id', '=', employee_id), ('type', '=', 'remove'), ('date_from', '>=', date_begin.strftime(tools.DEFAULT_SERVER_DATE_FORMAT)), ('date_from', '<=', date_end.strftime(tools.DEFAULT_SERVER_DATE_FORMAT)), ('state', '=', 'validate'), ('payslip_status', '=', False)], context=context)
-            res[employee_id] = {'leaves_count': leaves, 'approved_leaves_count': approved_leaves}
+        leaves = self.pool['hr.holidays'].read_group(cr, uid, [
+            ('employee_id', 'in', ids),
+            ('holiday_status_id.limit', '=', False), ('state', '=', 'validate')], fields=['number_of_days', 'employee_id'], groupby=['employee_id'])
+        res.update(dict([(leave['employee_id'][0], leave['number_of_days']) for leave in leaves ]))
         return res
+
+    def _show_approved_remaining_leave(self, cr, uid, ids, name, args, context=None):
+        if self.pool['res.users'].has_group(cr, uid, 'base.group_hr_user'):
+            return dict([(employee_id, True) for employee_id in ids])
+        return dict([(employee.id, True) for employee in self.browse(cr, uid, ids, context=context) if employee.user_id.id == uid])
 
     def _absent_employee(self, cr, uid, ids, field_name, arg, context=None):
         today_date = datetime.datetime.utcnow().date()
@@ -631,7 +640,7 @@ class hr_employee(osv.Model):
         'current_leave_id': fields.function(_get_leave_status, multi="leave_status", string="Current Leave Type", type='many2one', relation='hr.holidays.status'),
         'leave_date_from': fields.function(_get_leave_status, multi='leave_status', type='date', string='From Date'),
         'leave_date_to': fields.function(_get_leave_status, multi='leave_status', type='date', string='To Date'),
-        'leaves_count': fields.function(_leaves_count, multi='_leaves_count', type='integer', string='Number of Leaves (current month)'),
-        'approved_leaves_count': fields.function(_leaves_count, multi='_leaves_count', type='integer', string='Approved Leaves not in Payslip', help="These leaves are approved but not taken into account for payslip"),
+        'leaves_count': fields.function(_leaves_count, type='integer', string='Number of Leaves'),
+        'show_leaves': fields.function(_show_approved_remaining_leave, type='boolean', string="Able to see Remaining Leaves"),
         'is_absent_totay': fields.function(_absent_employee, fnct_search=_search_absent_employee, type="boolean", string="Absent Today", default=False)
     }
