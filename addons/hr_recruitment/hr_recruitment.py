@@ -685,7 +685,7 @@ class applicant_category(osv.osv):
     _name = "hr.applicant.category"
     _description = "Category of applicant"
     _columns = {
-        'name': fields.char('Name', required=True, translate=True),
+        'name': fields.char('Name', required=True),
     }
     _constraints = [(osv.osv._check_unique, _('Error! Tag name already exists.'), ['name'])]
 

@@ -10,7 +10,7 @@ class event_track_tag(models.Model):
     _description = 'Track Tag'
     _order = 'name'
 
-    name = fields.Char('Tag', translate=True)
+    name = fields.Char('Tag')
     track_ids = fields.Many2many('event.track', string='Tracks')
     _constraints = [(models.Model._check_unique, _('Error! Tag name already exists.'), ['name'])]
 

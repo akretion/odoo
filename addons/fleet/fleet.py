@@ -95,7 +95,7 @@ class fleet_vehicle_cost(osv.Model):
 class fleet_vehicle_tag(osv.Model):
     _name = 'fleet.vehicle.tag'
     _columns = {
-        'name': fields.char('Name', required=True, translate=True),
+        'name': fields.char('Name', required=True),
     }
     _constraints = [(osv.Model._check_unique, _('Error! Tag name already exists.'), ['name'])]
 

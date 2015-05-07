@@ -678,7 +678,7 @@ class calendar_event_type(osv.Model):
     _name = 'calendar.event.type'
     _description = 'Meeting Type'
     _columns = {
-        'name': fields.char('Name', required=True, translate=True),
+        'name': fields.char('Name', required=True),
     }
     _constraints = [(osv.Model._check_unique, _('Error! Tag name already exists.'), ['name'])]
     def copy_data(self, cr, uid, id, default=None, context=None):

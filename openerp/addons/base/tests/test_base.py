@@ -427,42 +427,41 @@ class test_translation(common.TransactionCase):
 
     def setUp(self):
         super(test_translation, self).setUp()
-        self.res_category = self.registry('res.partner.category')
+        self.res_partner_title = self.registry('res.partner.title')
         self.ir_translation = self.registry('ir.translation')
         cr, uid = self.cr, self.uid
         self.registry('ir.translation').load_module_terms(cr, ['base'], ['fr_FR'])
-        self.cat_id = self.res_category.create(cr, uid, {'name': 'Customers'})
-        self.ir_translation.create(cr, uid, {'name': 'res.partner.category,name', 'module':'base', 
-            'value': 'Clients', 'res_id': self.cat_id, 'lang':'fr_FR', 'state':'translated', 'type': 'model'})
+        self.title_id = self.res_partner_title.create(cr, uid, {'name': 'Customers'})
+        self.ir_translation.create(cr, uid, {'name': 'res.partner.title,name', 'module':'base',
+            'value': 'Clients', 'res_id': self.title_id, 'lang':'fr_FR', 'state':'translated', 'type': 'model'})
 
     def test_101_create_translated_record(self):
         cr, uid = self.cr, self.uid
         
-        no_context_cat = self.res_category.browse(cr, uid, self.cat_id)
-        self.assertEqual(no_context_cat.name, 'Customers', "Error in basic name_get")
+        no_context_title = self.res_partner_title.browse(cr, uid, self.title_id)
+        self.assertEqual(no_context_title.name, 'Customers', "Error in basic name_get")
 
-        fr_context_cat = self.res_category.browse(cr, uid, self.cat_id, context={'lang':'fr_FR'})
-        self.assertEqual(fr_context_cat.name, 'Clients', "Translation not found")
+        fr_context_title = self.res_partner_title.browse(cr, uid, self.title_id, context={'lang':'fr_FR'})
+        self.assertEqual(fr_context_title.name, 'Clients', "Translation not found")
 
     def test_102_duplicate_record(self):
         cr, uid = self.cr, self.uid
-        self.new_cat_id = self.res_category.copy(cr, uid, self.cat_id, context={'lang':'fr_FR'})
+        self.new_title_id = self.res_partner_title.copy(cr, uid, self.title_id, context={'lang':'fr_FR'})
 
-        no_context_cat = self.res_category.browse(cr, uid, self.new_cat_id)
-        self.assertEqual(no_context_cat.name, 'Customers', "Duplication did not set untranslated value")
+        no_context_title = self.res_partner_title.browse(cr, uid, self.new_title_id)
+        self.assertEqual(no_context_title.name, 'Customers', "Duplication did not set untranslated value")
 
-        fr_context_cat = self.res_category.browse(cr, uid, self.new_cat_id, context={'lang':'fr_FR'})
-        self.assertEqual(fr_context_cat.name, 'Clients', "Did not found translation for initial value")
+        fr_context_title = self.res_partner_title.browse(cr, uid, self.new_title_id, context={'lang':'fr_FR'})
+        self.assertEqual(fr_context_title.name, 'Clients', "Did not found translation for initial value")
 
     def test_103_duplicate_record_fr(self):
         cr, uid = self.cr, self.uid
-        self.new_fr_cat_id = self.res_category.copy(cr, uid, self.cat_id, default={'name': 'Clients (copie)'}, context={'lang':'fr_FR'})
+        self.new_fr_title_id = self.res_partner_title.copy(cr, uid, self.title_id, default={'name': 'Clients (copie)'}, context={'lang':'fr_FR'})
+        no_context_title = self.res_partner_title.browse(cr, uid, self.new_fr_title_id)
+        self.assertEqual(no_context_title.name, 'Customers', "Duplication erased original untranslated value")
 
-        no_context_cat = self.res_category.browse(cr, uid, self.new_fr_cat_id)
-        self.assertEqual(no_context_cat.name, 'Customers', "Duplication erased original untranslated value")
-
-        fr_context_cat = self.res_category.browse(cr, uid, self.new_fr_cat_id, context={'lang':'fr_FR'})
-        self.assertEqual(fr_context_cat.name, 'Clients (copie)', "Did not used default value for translated value")
+        fr_context_title = self.res_partner_title.browse(cr, uid, self.new_fr_title_id, context={'lang':'fr_FR'})
+        self.assertEqual(fr_context_title.name, 'Clients (copie)', "Did not used default value for translated value")
 
 test_state = None
 #: Stores state information across multiple test classes
