@@ -5514,6 +5514,10 @@ class BaseModel(object):
                 filename, lineno = frame_codeinfo(currentframe(), 1)
                 _logger.warning("Comparing apples and oranges: %r == %r (%s:%s)",
                                 self, other, filename, lineno)
+                if config.get('debug_mode'):
+                    _logger.warning("You are in debug mode please stop doing "
+                                    "juice and fix multi-fruit comparaison")
+                    import pdb; pdb.set_trace()
             return False
         return self._name == other._name and set(self._ids) == set(other._ids)
 

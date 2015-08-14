@@ -33,6 +33,7 @@ import xmlrpclib
 from openerp.tools import float_round, frozendict, html_sanitize, ustr, OrderedSet
 from openerp.tools import DEFAULT_SERVER_DATE_FORMAT as DATE_FORMAT
 from openerp.tools import DEFAULT_SERVER_DATETIME_FORMAT as DATETIME_FORMAT
+from openerp.tools import config
 
 DATE_LENGTH = len(date.today().strftime(DATE_FORMAT))
 DATETIME_LENGTH = len(datetime.now().strftime(DATETIME_FORMAT))
@@ -50,6 +51,9 @@ class SpecialValue(object):
 class FailedValue(SpecialValue):
     """ Special value that encapsulates an exception instead of a value. """
     def __init__(self, exception):
+        if config.get('debug_mode'):
+            print 'Exception', exception
+            import pdb; pdb.set_trace()
         self.exception = exception
     def get(self):
         raise self.exception
