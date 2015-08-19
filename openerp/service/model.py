@@ -11,7 +11,7 @@ import openerp
 from openerp.tools.translate import translate
 from openerp.osv.orm import except_orm
 from contextlib import contextmanager
-
+from openerp.tools import config
 import security
 
 _logger = logging.getLogger(__name__)
@@ -112,6 +112,7 @@ def check(f):
                     raise openerp.exceptions.Warning('Currently, this database is not fully loaded and can not be used.')
                 return f(dbname, *args, **kwargs)
             except OperationalError, e:
+                if config.get('debug_mode'): raise
                 # Automatically retry the typical transaction serialization errors
                 if e.pgcode not in PG_CONCURRENCY_ERRORS_TO_RETRY:
                     raise
@@ -123,6 +124,7 @@ def check(f):
                 _logger.info("%s, retry %d/%d in %.04f sec..." % (errorcodes.lookup(e.pgcode), tries, MAX_TRIES_ON_CONCURRENCY_FAILURE, wait_time))
                 time.sleep(wait_time)
             except IntegrityError, inst:
+                if config.get('debug_mode'): raise
                 registry = openerp.registry(dbname)
                 for key in registry._sql_error.keys():
                     if key in inst[0]:

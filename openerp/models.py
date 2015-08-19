@@ -1070,9 +1070,11 @@ class BaseModel(object):
                      noupdate=noupdate, res_id=id, context=context))
                 cr.execute('RELEASE SAVEPOINT model_load_save')
             except psycopg2.Warning, e:
+                if config.get('debug_mode'): raise
                 messages.append(dict(info, type='warning', message=str(e)))
                 cr.execute('ROLLBACK TO SAVEPOINT model_load_save')
             except psycopg2.Error, e:
+                if config.get('debug_mode'): raise
                 messages.append(dict(
                     info, type='error',
                     **PGERROR_TO_OE[e.pgcode](self, fg, info, e)))
@@ -1080,6 +1082,7 @@ class BaseModel(object):
                 # avoid broken transaction) and keep going
                 cr.execute('ROLLBACK TO SAVEPOINT model_load_save')
             except Exception, e:
+                if config.get('debug_mode'): raise
                 message = (_('Unknown error during import:') +
                            ' %s: %s' % (type(e), unicode(e)))
                 moreinfo = _('Resolve other errors first')
