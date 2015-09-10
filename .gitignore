@@ -15,6 +15,8 @@ _build/
 status
 # odoo filestore
 openerp/filestore
+#odoo backup base css
+addons/web/static/src/css/base.css.bak
 # maintenance migration scripts
 openerp/addons/base/maintenance
 
