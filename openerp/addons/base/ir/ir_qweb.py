@@ -926,25 +926,13 @@ class RelativeDatetimeConverter(osv.AbstractModel):
         return babel.dates.format_timedelta(
             value - reference, add_direction=True, locale=locale)
 
+
 class Contact(orm.AbstractModel):
     _name = 'ir.qweb.field.contact'
     _inherit = 'ir.qweb.field.many2one'
 
-    def record_to_html(self, cr, uid, field_name, record, options=None, context=None):
-        if context is None:
-            context = {}
-
-        if options is None:
-            options = {}
-        opf = options.get('fields') or ["name", "address", "phone", "mobile", "fax", "email"]
-
-        value_rec = record[field_name]
-        if not value_rec:
-            return None
-        value_rec = value_rec.sudo().with_context(show_address=True)
-        value = value_rec.name_get()[0][1]
-
-        val = {
+    def prepare_vals(self, cr, uid, value, value_rec, opf, options, context=None):
+        return {
             'name': value.split("\n")[0],
             'address': escape("\n".join(value.split("\n")[1:])),
             'phone': value_rec.phone,
@@ -959,9 +947,24 @@ class Contact(orm.AbstractModel):
             'options': options
         }
 
-        html = self.pool["ir.ui.view"].render(cr, uid, "base.contact", val, engine='ir.qweb', context=context).decode('utf8')
+    def record_to_html(self, cr, uid, field_name, record, options=None, context=None):
+        if context is None:
+            context = {}
+
+        if options is None:
+            options = {}
+        opf = options.get('fields') or ["name", "address", "phone", "mobile", "fax", "email"]
+
+        value_rec = record[field_name]
+        if not value_rec:
+            return None
+        value_rec = value_rec.sudo().with_context(show_address=True)
+        value = value_rec.name_get()[0][1]
+        vals = self.prepare_vals(cr, uid, value, value_rec, opf, options, context=context)
+        html = self.pool["ir.ui.view"].render(cr, uid, "base.contact", vals, engine='ir.qweb', context=context).decode('utf8')
 
         return HTMLSafe(html)
+
 
 class QwebView(orm.AbstractModel):
     _name = 'ir.qweb.field.qweb'
