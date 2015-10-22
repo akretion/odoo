@@ -598,7 +598,8 @@ class mail_thread(osv.AbstractModel):
         if local_parts:
             mail_alias = self.pool.get('mail.alias')
             alias_ids = mail_alias.search(cr, uid, [('alias_name', 'in', local_parts)])
-            if alias_ids:
+            #TODO bugged/broken V7 feature for notifying user
+            if False:#alias_ids:
                 routes = []
                 for alias in mail_alias.browse(cr, uid, alias_ids, context=context):
                     user_id = alias.alias_user_id.id
