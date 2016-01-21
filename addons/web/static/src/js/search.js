@@ -440,7 +440,8 @@ instance.web.SearchView = instance.web.Widget.extend(/** @lends instance.web.Sea
         if (view_manager) {
             this.view_manager = view_manager;
             view_manager.on('switch_mode', this, function (e) {
-                self.drawer.toggle(e === 'graph');
+//                self.drawer.toggle(e === 'graph');
+                self.drawer.toggle(e !== 'form');
             });
         }
         return $.when(p, this.ready);
