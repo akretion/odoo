@@ -411,7 +411,7 @@ instance.web.ListView = instance.web.View.extend( /** @lends instance.web.ListVi
             this.$pager.hide();
         else
             this.$pager.css("display", "");
-        this.$pager.toggleClass('oe_list_pager_single_page', (total <= limit));
+        this.$pager.toggleClass('oe_list_pager_single_page', (false));
         var spager = '-';
         if (total) {
             var range_start = this.page * limit + 1;
