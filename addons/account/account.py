@@ -1560,6 +1560,7 @@ class account_move(osv.osv):
             line_ids = []
             line_draft_ids = []
             company_id = None
+            obj_move_line._update_journal_check(cr, uid, journal.id, move.period_id.id, context=context)
             for line in move.line_id:
                 amount += line.debit - line.credit
                 line_ids.append(line.id)
