@@ -1106,7 +1106,7 @@ class BaseModel(object):
             self._rec_name = 'name'
 
 
-    def __export_row(self, cr, uid, row, fields, context=None):
+    def _export_row(self, cr, uid, row, fields, context=None):
         if context is None:
             context = {}
 
@@ -1199,7 +1199,7 @@ class BaseModel(object):
                             break
 
                         for row2 in r:
-                            lines2 = row2._model.__export_row(cr, uid, row2, fields2,
+                            lines2 = row2._model._export_row(cr, uid, row2, fields2,
                                     context)
                             if first:
                                 for fpos2 in range(len(fields)):
@@ -1251,7 +1251,7 @@ class BaseModel(object):
         fields_to_export = map(fix_import_export_id_paths, fields_to_export)
         datas = []
         for row in self.browse(cr, uid, ids, context):
-            datas += self.__export_row(cr, uid, row, fields_to_export, context)
+            datas += self._export_row(cr, uid, row, fields_to_export, context)
         return {'datas': datas}
 
     def import_data(self, cr, uid, fields, datas, mode='init', current_module='', noupdate=False, context=None, filename=None):
