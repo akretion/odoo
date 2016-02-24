@@ -41,7 +41,7 @@ openerp.account = function (instance) {
             this.time_widget_loaded = Date.now();
     
             // Stuff used by the children bankStatementReconciliationLine
-            this.max_move_lines_displayed = 5;
+            this.max_move_lines_displayed = 15;
             this.animation_speed = 100; // "Blocking" animations
             this.aestetic_animation_speed = 300; // eye candy
             this.map_currency_id_rounding = {};
@@ -912,7 +912,9 @@ openerp.account = function (instance) {
                 relation: "res.partner",
                 string: _t("Partner"),
                 type: "many2one",
-                domain: [['parent_id','=',false], '|', ['customer','=',true], ['supplier','=',true]],
+                // AKRETION HACK 21/01/2015 by Alexis
+                // display all partners, not just suppliers or customers
+                domain: [['parent_id','=',false]],
             });
     
             // Returns a function that serves as a xhr response handler
@@ -1642,7 +1644,12 @@ openerp.account = function (instance) {
         // Returns an object that can be passed to process_reconciliation()
         prepareSelectedMoveLineForPersisting: function(line) {
             return {
-                name: line.name,
+                // AKRETION HACK 29/1/2016 by Alexis
+                // Write the bank statement line name as name of the move line
+                // with customer/suppplier account when reconciled with an invoice
+                // It's better when the accountant looks at the customer/supplier
+                // account
+                name: this.st_line.name,
                 debit: line.debit,
                 credit: line.credit,
                 counterpart_move_line_id: line.id,

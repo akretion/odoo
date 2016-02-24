@@ -447,7 +447,10 @@ class account_move_line(osv.osv):
             if line.reconcile_id:
                 res[line.id] = str(line.reconcile_id.name)
             elif line.reconcile_partial_id:
-                res[line.id] = str(line.reconcile_partial_id.name)
+                # AKRETION HACK 29/01/2016
+                # Easy visual distinction between partial rec and full rec
+                # in Journal Items
+                res[line.id] = str(line.reconcile_partial_id.name).lower()
         return res
 
     def _get_move_from_reconcile(self, cr, uid, ids, context=None):

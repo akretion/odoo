@@ -219,7 +219,7 @@ class account_bank_statement(osv.osv):
         """
         return {
             'journal_id': st_line.statement_id.journal_id.id,
-            'period_id': st_line.statement_id.period_id.id,
+            'period_id': self.pool['account.period'].find(cr, uid, dt=st_line.date, context=context)[0],
             'date': st_line.date,
             'name': st_line_number,
             'ref': st_line.ref,
@@ -300,7 +300,7 @@ class account_bank_statement(osv.osv):
             'debit': debit,
             'statement_id': st_line.statement_id.id,
             'journal_id': st_line.statement_id.journal_id.id,
-            'period_id': st_line.statement_id.period_id.id,
+            'period_id': self.pool['account.period'].find(cr, uid, dt=st_line.date, context=context)[0],
             'currency_id': amount_currency and cur_id,
             'amount_currency': amount_currency,
         }
@@ -596,7 +596,7 @@ class account_bank_statement_line(osv.osv):
             domain += [(amount_field, '<', 0), (amount_field, '>=', (sign * amount))]
         else:
             domain += [(amount_field, '>', 0), (amount_field, '<=', (sign * amount))]
-        mv_lines = self.get_move_lines_for_reconciliation(cr, uid, st_line, excluded_ids=excluded_ids, limit=5, additional_domain=domain, context=context)
+        mv_lines = self.get_move_lines_for_reconciliation(cr, uid, st_line, excluded_ids=excluded_ids, limit=15, additional_domain=domain, context=context)
         ret = []
         total = 0
         for line in mv_lines:
@@ -635,7 +635,8 @@ class account_bank_statement_line(osv.osv):
             domain += [
                 '|', ('move_id.name', 'ilike', str),
                 '|', ('move_id.ref', 'ilike', str),
-                ('date_maturity', 'like', str),
+                '|', ('date_maturity', 'like', str),
+                ('account_id.code', '=ilike', str + '%'),
             ]
             if not st_line.partner_id.id:
                 domain.insert(-1, '|', )
@@ -707,7 +708,7 @@ class account_bank_statement_line(osv.osv):
         return {
             'move_id': move_id,
             'name': _('change') + ': ' + (st_line.name or '/'),
-            'period_id': st_line.statement_id.period_id.id,
+            'period_id': self.pool['account.period'].find(cr, uid, dt=st_line.date, context=context)[0],
             'journal_id': st_line.journal_id.id,
             'partner_id': st_line.partner_id.id,
             'company_id': st_line.company_id.id,
@@ -831,7 +832,7 @@ class account_bank_statement_line(osv.osv):
                 continue
             mv_line_dict['ref'] = move_name
             mv_line_dict['move_id'] = move_id
-            mv_line_dict['period_id'] = st_line.statement_id.period_id.id
+            mv_line_dict['period_id'] = self.pool['account.period'].find(cr, uid, dt=st_line.date, context=context)[0]
             mv_line_dict['journal_id'] = st_line.journal_id.id
             mv_line_dict['company_id'] = st_line.company_id.id
             mv_line_dict['statement_id'] = st_line.statement_id.id
