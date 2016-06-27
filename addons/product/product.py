@@ -602,7 +602,7 @@ class product_template(osv.osv):
 
         # related to display product product information if is_product_variant
         'ean13': fields.related('product_variant_ids', 'ean13', type='char', string='EAN13 Barcode'),
-        'default_code': fields.related('product_variant_ids', 'default_code', type='char', string='Internal Reference'),
+        'default_code': fields.related('product_variant_ids', 'default_code', type='char', string='Internal Reference', store=True),
     }
 
     def _price_get_list_price(self, product):
