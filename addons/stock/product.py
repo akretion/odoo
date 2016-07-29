@@ -26,6 +26,26 @@ import openerp.addons.decimal_precision as dp
 from openerp.tools.float_utils import float_round
 from openerp.exceptions import except_orm
 
+import logging
+import timeit
+import random
+import operator as py_operator
+logger = logging.getLogger("imp_perf")
+formatter = logging.Formatter('%(asctime)s :: %(message)s')
+fh = logging.FileHandler('imp_perf.log')  # will be parts/odoo
+fh.setLevel(logging.INFO)
+fh.setFormatter(formatter)
+logger.addHandler(fh)
+
+py_oper = {
+    '<':  py_operator.lt,
+    '>':  py_operator.gt,
+    '<=': py_operator.le,
+    '>=': py_operator.ge,
+    '==': py_operator.eq,
+    '!=': py_operator.ne
+}
+
 class product_product(osv.osv):
     _inherit = "product.product"
         
@@ -159,15 +179,54 @@ class product_product(osv.osv):
 
         domain_move_in += domain_move_in_loc
         domain_move_out += domain_move_out_loc
-        moves_in = self.pool.get('stock.move').read_group(cr, uid, domain_move_in, ['product_id', 'product_qty'], ['product_id'], context=context)
-        moves_out = self.pool.get('stock.move').read_group(cr, uid, domain_move_out, ['product_id', 'product_qty'], ['product_id'], context=context)
 
-        domain_quant += domain_quant_loc
-        quants = self.pool.get('stock.quant').read_group(cr, uid, domain_quant, ['product_id', 'qty'], ['product_id'], context=context)
-        quants = dict(map(lambda x: (x['product_id'][0], x['qty']), quants))
+        def blazzing_fast_read_group(model_name, domain):
+            model = self.pool.get(model_name)
+            query_obj = model._where_calc(cr, uid, domain, context=context)
+            model._apply_ir_rules(cr, uid, query_obj, 'read', context=context)
+            from_clause, where_clause, where_clause_params = query_obj.get_sql()
 
-        moves_in = dict(map(lambda x: (x['product_id'][0], x['product_qty']), moves_in))
-        moves_out = dict(map(lambda x: (x['product_id'][0], x['product_qty']), moves_out))
+            select_clauses = {
+                'stock.move': """%(table)s.product_id, sum(%(table)s.product_qty) as quantity""" % {'table': model._table },
+                'stock.quant': """%(table)s.product_id, sum(%(table)s.qty) as quantity""" % {'table': model._table },
+            }
+
+            query = """SELECT
+            %(select)s
+            FROM %(from)s
+            WHERE %(where)s
+            GROUP BY product_id""" % {
+                'select': select_clauses[model_name],
+                'from': from_clause,
+                'where': where_clause,
+            }
+
+            cr.execute(query, where_clause_params)
+            return dict(cr.fetchall())  # ! dictfetch()
+
+        start = timeit.default_timer()
+#        impl = random.choice(['old_read_group', 'blazzing_fast_read_group'])
+        impl = 'blazzing_fast_read_group'
+
+        if impl == 'blazzing_fast_read_group':
+            moves_in = blazzing_fast_read_group('stock.move', domain_move_in)
+            moves_out = blazzing_fast_read_group('stock.move', domain_move_out)
+            quants = blazzing_fast_read_group('stock.quant', domain_quant)
+        else:
+            moves_in = self.pool.get('stock.move').read_group(cr, uid, domain_move_in, ['product_id', 'product_qty'], ['product_id'], context=context)
+            moves_out = self.pool.get('stock.move').read_group(cr, uid, domain_move_out, ['product_id', 'product_qty'], ['product_id'], context=context)
+
+            domain_quant += domain_quant_loc
+            quants = self.pool.get('stock.quant').read_group(cr, uid, domain_quant, ['product_id', 'qty'], ['product_id'], context=context)
+            quants = dict(map(lambda x: (x['product_id'][0], x['qty']), quants))
+            moves_in = dict(map(lambda x: (x['product_id'][0], x['product_qty']), moves_in))
+            moves_out = dict(map(lambda x: (x['product_id'][0], x['product_qty']), moves_out))
+
+        stop = timeit.default_timer()
+        logger.critical(
+            '{ "imp": "%s", "duration": "%s", "fun": "%s"}'
+            % (impl, stop - start, '_product_available'))
+
         res = {}
         for product in self.browse(cr, uid, ids, context=context):
             id = product.id
@@ -184,6 +243,27 @@ class product_product(osv.osv):
         return res
 
     def _search_product_quantity(self, cr, uid, obj, name, domain, context):
+        def measure(fun):
+            start = timeit.default_timer()
+            result = fun()
+            stop = timeit.default_timer()
+            logger.info(
+                '{ "imp": "%s", "duration": "%s", "domain": "%s"}'
+                % (fun.__name__, stop - start, domain))
+            return result
+
+        def with_eval():
+            for element in self.browse(cr, uid, product_ids, context=context):
+                    if eval(str(element[field]) + operator + str(value)):
+                        ids.append(element.id)
+
+        def with_operators():
+            for element in self.browse(cr, uid, product_ids, context=context):
+                if py_oper[operator](element[field], value):
+                    ids.append(element.id)
+
+        impl = random.choice([with_eval, with_operators])
+
         res = []
         for field, operator, value in domain:
             #to prevent sql injections
@@ -201,9 +281,7 @@ class product_product(osv.osv):
                 product_ids = self.search(cr, uid, [], context=context)
                 if product_ids:
                     #TODO: Still optimization possible when searching virtual quantities
-                    for element in self.browse(cr, uid, product_ids, context=context):
-                        if eval(str(element[field]) + operator + str(value)):
-                            ids.append(element.id)
+                    measure(impl)
                     res.append(('id', 'in', ids))
         return res
 
