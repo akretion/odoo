@@ -1230,6 +1230,8 @@ class procurement_order(osv.osv):
                 'taxes_id': [(6,0,taxes)],
             }
             name = seq_obj.get(cr, uid, 'purchase.order') or _('PO: %s') % procurement.name
+            # Add shop_id to PO. Directly in purchase module because we are migrating to v9 already. 
+            # We won't need this hack anymore
             po_vals = {
                 'name': name,
                 'origin': procurement.origin,
@@ -1241,6 +1243,7 @@ class procurement_order(osv.osv):
                 'company_id': procurement.company_id.id,
                 'fiscal_position': partner.property_account_position and partner.property_account_position.id or False,
                 'payment_term_id': partner.property_supplier_payment_term.id or False,
+                'shop_id': procurement.sale_id and procurement.sale_id.shop_id.id or False,
             }
             res[procurement.id] = self.create_procurement_purchase_order(cr, uid, procurement, po_vals, line_vals, context=new_context)
             self.write(cr, uid, [procurement.id], {'state': 'running', 'purchase_id': res[procurement.id]})
