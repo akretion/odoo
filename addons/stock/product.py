@@ -136,15 +136,13 @@ class product_product(osv.osv):
             domain.append(('date', '<=', to_date))
         return domain
 
-    def _product_available(self, cr, uid, ids, field_names=None, arg=False, context=None):
-        context = context or {}
-        field_names = field_names or []
-
-        domain_products = [('product_id', 'in', ids)]
+    def _get_product_qyt_domain(self, cr, uid, ids, context):
+        context = context or {}        
+        domain_products = ids and [('product_id', 'in', ids)] or []
         domain_quant, domain_move_in, domain_move_out = [], [], []
-        domain_quant_loc, domain_move_in_loc, domain_move_out_loc = self._get_domain_locations(cr, uid, ids, context=context)
-        domain_move_in += self._get_domain_dates(cr, uid, ids, context=context) + [('state', 'not in', ('done', 'cancel', 'draft'))] + domain_products
-        domain_move_out += self._get_domain_dates(cr, uid, ids, context=context) + [('state', 'not in', ('done', 'cancel', 'draft'))] + domain_products
+        domain_quant_loc, domain_move_in_loc, domain_move_out_loc = self._get_domain_locations(cr, uid, [], context=context)
+        domain_move_in += self._get_domain_dates(cr, uid, [], context=context) + [('state', 'not in', ('done', 'cancel', 'draft'))] + domain_products
+        domain_move_out += self._get_domain_dates(cr, uid, [], context=context) + [('state', 'not in', ('done', 'cancel', 'draft'))] + domain_products
         domain_quant += domain_products
 
         if context.get('lot_id'):
@@ -159,29 +157,211 @@ class product_product(osv.osv):
 
         domain_move_in += domain_move_in_loc
         domain_move_out += domain_move_out_loc
-        moves_in = self.pool.get('stock.move').read_group(cr, uid, domain_move_in, ['product_id', 'product_qty'], ['product_id'], context=context)
-        moves_out = self.pool.get('stock.move').read_group(cr, uid, domain_move_out, ['product_id', 'product_qty'], ['product_id'], context=context)
-
         domain_quant += domain_quant_loc
-        quants = self.pool.get('stock.quant').read_group(cr, uid, domain_quant, ['product_id', 'qty'], ['product_id'], context=context)
-        quants = dict(map(lambda x: (x['product_id'][0], x['qty']), quants))
+        return domain_move_in, domain_move_out, domain_quant
 
+    def _product_available(self, cr, uid, ids, field_names=None, arg=False, context=None):
+        context = context or {}
+        field_names = field_names or []
+
+        domain_move_in, domain_move_out, domain_quant = self._get_product_qyt_domain(cr, uid, ids, context=context)
+        def blazzing_fast_read_group(model_name, domain):
+            model = self.pool.get(model_name)
+            query_obj = model._where_calc(cr, uid, domain, context=context)
+            model._apply_ir_rules(cr, uid, query_obj, 'read', context=context)
+            from_clause, where_clause, where_clause_params = query_obj.get_sql()
+
+            select_clauses = {
+                'stock.move': """%(table)s.product_id, sum(%(table)s.product_qty) as quantity""" % {'table': model._table },
+                'stock.quant': """%(table)s.product_id, sum(%(table)s.qty) as quantity""" % {'table': model._table },
+            }
+
+            query = """SELECT
+            %(select)s
+            FROM %(from)s
+            WHERE %(where)s
+            GROUP BY product_id""" % {
+                'select': select_clauses[model_name],
+                'from': from_clause,
+                'where': where_clause,
+            }
+
+            cr.execute(query, where_clause_params)
+            return dict(cr.fetchall())  # ! dictfetch()
+
+        # start = timeit.default_timer()
+#        impl = random.choice(['old_read_group', 'blazzing_fast_read_group'])
+        impl = context.get('impl', 'blazzing_fast_read_group')
+        if impl == 'blazzing_fast_read_group':
+            moves_in = blazzing_fast_read_group('stock.move', domain_move_in)
+            moves_out = blazzing_fast_read_group('stock.move', domain_move_out)
+            quants = blazzing_fast_read_group('stock.quant', domain_quant)
+        else:
+            moves_in = self.pool.get('stock.move').read_group(cr, uid, domain_move_in, ['product_id', 'product_qty'], ['product_id'], context=context)
+            moves_out = self.pool.get('stock.move').read_group(cr, uid, domain_move_out, ['product_id', 'product_qty'], ['product_id'], context=context)
+            quants = self.pool.get('stock.quant').read_group(cr, uid, domain_quant, ['product_id', 'qty'], ['product_id'], context=context)
+            quants = dict(map(lambda x: (x['product_id'][0], x['qty']), quants))
+            moves_in = dict(map(lambda x: (x['product_id'][0], x['product_qty']), moves_in))
+            moves_out = dict(map(lambda x: (x['product_id'][0], x['product_qty']), moves_out))
+
+        # stop = timeit.default_timer()
+        # logger.critical(
+        #     '{ "imp": "%s", "duration": "%s", "fun": "%s", "Nb_prod_ids": "%s" }'
+        #     % (impl, stop - start, '_product_available', len(ids)))
         moves_in = dict(map(lambda x: (x['product_id'][0], x['product_qty']), moves_in))
         moves_out = dict(map(lambda x: (x['product_id'][0], x['product_qty']), moves_out))
         res = {}
-        for product in self.browse(cr, uid, ids, context=context):
-            id = product.id
-            qty_available = float_round(quants.get(id, 0.0), precision_rounding=product.uom_id.rounding)
-            incoming_qty = float_round(moves_in.get(id, 0.0), precision_rounding=product.uom_id.rounding)
-            outgoing_qty = float_round(moves_out.get(id, 0.0), precision_rounding=product.uom_id.rounding)
-            virtual_available = float_round(quants.get(id, 0.0) + moves_in.get(id, 0.0) - moves_out.get(id, 0.0), precision_rounding=product.uom_id.rounding)
+        # To improuve perf avoid brows product to get uom rounding 
+        cr.execute("""select p.id, m.rounding  FROM product_product p 
+            inner join product_template t on p.product_tmpl_id = t.id 
+            inner join product_uom m on t.uom_id = m.id 
+            where p.id in %s""", (tuple(ids),))
+        p_rounding  =  dict(cr.fetchall())
+
+        for id in ids:
+            qty_available = float_round(quants.get(id, 0.0), precision_rounding=p_rounding.get(id, 0.01))
+            incoming_qty = float_round(moves_in.get(id, 0.0), precision_rounding=p_rounding.get(id, 0.01))
+            outgoing_qty = float_round(moves_out.get(id, 0.0), precision_rounding=p_rounding.get(id, 0.01))
+            virtual_available = float_round(quants.get(id, 0.0) + moves_in.get(id, 0.0) - moves_out.get(id, 0.0), precision_rounding=p_rounding.get(id, 0.01))
             res[id] = {
                 'qty_available': qty_available,
                 'incoming_qty': incoming_qty,
                 'outgoing_qty': outgoing_qty,
                 'virtual_available': virtual_available,
             }
+
         return res
+
+    def _get_groupby_query(self, cr, uid, model_name, domain,
+        context=False, having=False):
+
+        context = context or {}
+        having = having or []
+        model = self.pool.get(model_name)
+        query_obj = model._where_calc(cr, uid, domain, context=context)
+        model._apply_ir_rules(cr, uid, query_obj, 'read', context=context)
+        from_clause, where_clause, where_clause_params = query_obj.get_sql()
+
+        select_clauses = {
+            'stock.move': """%(table)s.product_id, sum(%(table)s.product_qty) as quantity""" % {'table': model._table },
+            'stock.quant': """%(table)s.product_id, sum(%(table)s.qty) as quantity""" % {'table': model._table },
+        }
+        agrs_fields = {
+            'stock.move': 'product_qty',
+            'stock.quant': 'qty',
+        }
+        having_conditions = []
+        for field, operator, value in having:
+            group_operator = model._fields[agrs_fields[model_name]].group_operator or 'sum'
+            having_conditions.append('%s(%s) %s' % (group_operator, agrs_fields[model_name], operator) + ' %s')
+            where_clause_params.append(value)
+        having_clause = having_conditions and (' HAVING ' + ' AND '.join(having_conditions)) or ''
+        query = """ SELECT
+        %(select)s
+        FROM %(from)s
+        WHERE %(where)s
+        GROUP BY product_id %(having)s """ % {
+            'select': select_clauses[model_name],
+            'from': from_clause,
+            'where': where_clause or ' 1=1 ',
+            'having': having_clause,
+        }
+        return query, where_clause_params
+
+    def blazzing_fast_read_group(self, cr, uid, model_name, domain,
+        context=False, having=False):
+        context = context or {}
+        having = having or []
+        query, where_clause_params = self._get_groupby_query(cr, uid, model_name, domain, context=context, having=having)
+        cr.execute(query, where_clause_params)
+        return dict(cr.fetchall())
+
+    def _search_virtual_qty(self, cr, uid, domain_move_in, domain_move_out, domain_quant, context=False, domain_virtual_qty=False):
+        """
+        Virtual quatity = qty_available + incoming_qty - outgoing_qty
+        make search in python side make search verry slows if we have 100K products or more. 
+        The solve this we make request in sql side.
+        To be able to seaech in sql we have to get make a querry witch return for each product qty_available, incoming_qty, outgoing_qty before filtring value. For all unmoved products (whitou stock_move or stock_quants qty = 0 )
+        """
+
+        context = context or {}
+        domain_virtual_qty = domain_virtual_qty or []
+        query_quant1, where_clause_params_quant1 = self._get_groupby_query(cr, uid, 'stock.quant', domain_quant, context=context, having=False)
+        query_quant2, where_clause_params_quant2 = self._get_unmoved_product_query(
+                    cr, uid, 'stock.quant', domain_quant, context=context)
+        query_in1, where_clause_params_in1 = self._get_groupby_query(cr, uid, 'stock.move', domain_move_in, context=context, having=False)
+        query_in2, where_clause_params_in2 = self._get_unmoved_product_query(
+                    cr, uid, 'stock.move', domain_move_in, context=context)
+
+        query_out1, where_clause_params_out1 = self._get_groupby_query(cr, uid, 'stock.move', domain_move_out, context=context, having=False)
+        query_out2, where_clause_params_out2 = self._get_unmoved_product_query(
+                    cr, uid, 'stock.move', domain_move_out, context=context)
+
+        where_clause_params_v_qty = where_clause_params_quant1 + \
+            where_clause_params_quant2 + where_clause_params_in1 + \
+            where_clause_params_in2 + where_clause_params_out1 + \
+            where_clause_params_out2
+
+        query_quant =  query_quant1 + " UNION " + query_quant2
+        query_in =  query_in1 + " UNION " + query_in2
+        query_out =  query_out1 + " UNION " + query_out2
+
+        v_qty_conditions = []
+        # in virtual quatity having condition wil be expressed as where condition
+        for field, operator, value in domain_virtual_qty:
+            v_qty_conditions.append('(query_quant.quantity + query_in.quantity - query_out.quantity) %s' % (operator,) + ' %s')
+            where_clause_params_v_qty.append(value)
+        v_qty_clause = v_qty_conditions and (' WHERE ' + ' AND '.join(v_qty_conditions)) or ''
+
+        v_qty_query = """SELECT query_quant.product_id as id,
+            (query_quant.quantity + query_in.quantity - query_out.quantity) as quantity FROM
+                (%(query_quant)s) AS query_quant 
+                INNER JOIN (%(query_in)s) AS query_in 
+                ON query_in.product_id = query_quant.product_id
+                INNER JOIN  (%(query_out)s) AS query_out 
+                ON query_out.product_id = query_quant.product_id
+                %(where)s
+                """ % {
+                    'query_quant': query_quant,
+                    'query_in': query_in,
+                    'query_out': query_out,
+                    'where': v_qty_clause or ' ',
+                }
+        cr.execute(v_qty_query, where_clause_params_v_qty)
+        return dict(cr.fetchall())
+
+    def _get_unmoved_product_query(self, cr, uid, model_name, domain,
+                              context=False):
+        context = context or {}
+        model = self.pool.get(model_name)
+        query_obj = model._where_calc(cr, uid, domain, context=context)
+        model._apply_ir_rules(cr, uid, query_obj, 'read', context=context)
+        from_clause, where_clause, where_clause_params = query_obj.get_sql()
+
+        select_clauses = {
+            'stock.move': """%(table)s.product_id, 0 as quantity""" % {'table': model._table },
+            'stock.quant': """%(table)s.product_id, 0 as quantity""" % {'table': model._table },
+        }
+
+        query = """( SELECT id, 0 from product_product WHERE active = True 
+        EXCEPT SELECT
+            %(select)s
+            FROM %(from)s
+            WHERE %(where)s
+        ) """ % {
+            'select': select_clauses[model_name],
+            'from': from_clause,
+            'where': where_clause or ' 1=1 ',
+        }
+
+        return query, where_clause_params
+
+    def _get_unmoved_product(self, cr, uid, model_name, domain,
+                             context=False):
+        context = context or {}
+        query, where_clause_params = self._get_unmoved_product_query(cr, uid, model_name, domain, context=context)
+        cr.execute(query, where_clause_params)
+        return cr.fetchall()
 
     def _search_product_quantity(self, cr, uid, obj, name, domain, context):
         res = []
@@ -193,18 +373,123 @@ class product_product(osv.osv):
 
             if operator == '=':
                 operator = '=='
+            ################################""""""""""""
+            # ids = []
+            # ids = self.search(cr, uid, [], context=context)
+            # start = timeit.default_timer()
+            # ctx = context.copy()
+            # ctx.update({'impl': 'old_read_group'})
+            # qty_odoo = self._product_available(cr, uid, ids, field_names=None, arg=False, context=ctx)
+            
+            # stop = timeit.default_timer()
+            # logger.critical(
+            #         '{ "imp": "%s", "duration": "%s", "fun": "%s", " nb prod_ids": "%s" }'
+            #      % ('old_read_group', stop - start, '_product_available', len(ids)))
 
+
+            # start = timeit.default_timer()
+            # ctx.update({'impl': 'blazzing_fast_read_group'})
+
+            # qty_new = self._product_available(cr, uid, ids, field_names=None, arg=False, context=ctx)
+            # stop = timeit.default_timer()
+            # logger.critical(
+            #         '{ "imp": "%s", "duration": "%s", "fun": "%s", " nb prod_ids": "%s" }'
+            #      % ('New_read_group', stop - start, '_product_available', len(ids)))
+            # diff_res = {}
+            # for id in ids:
+            #     diff_values = {}
+            #     if qty_new[id]['qty_available'] != qty_odoo[id]['qty_available']:
+            #         diff_res[id]['qty_available'] ={
+            #         'old': qty_odoo[id]['qty_available'],
+            #         'new': qty_new[id]['qty_available'],
+            #         }
+            #     if qty_new[id]['incoming_qty'] != qty_odoo[id]['incoming_qty']:
+            #         diff_res[id]['incoming_qty'] ={
+            #         'old': qty_odoo[id]['incoming_qty'],
+            #         'new': qty_new[id]['incoming_qty'],
+            #         }
+            #     if qty_new[id]['outgoing_qty'] != qty_odoo[id]['outgoing_qty']:
+            #         diff_res[id]['outgoing_qty'] ={
+            #         'old': qty_odoo[id]['outgoing_qty'],
+            #         'new': qty_new[id]['outgoing_qty'],
+            #         }
+            #     if qty_new[id]['virtual_available'] != qty_odoo[id]['virtual_available']:
+            #         diff_res[id]['virtual_available'] ={
+            #         'old': qty_odoo[id]['virtual_available'],
+            #         'new': qty_new[id]['virtual_available'],
+            #         }
+            # if diff_res:
+            #     print "#####################diff !!!!! %s" % len(diff_res)
+            #     print diff_res
+            # else:
+            #      print "OOOOOOKKKKKKKKKKKKKKKKKKKKKKK"
+
+            #################################"""""""""
             ids = []
-            if name == 'qty_available' and (value != 0.0 or operator not in  ('==', '>=', '<=')):
-                res.append(('id', 'in', self._search_qty_available(cr, uid, operator, value, context)))
-            else:
-                product_ids = self.search(cr, uid, [], context=context)
-                if product_ids:
-                    #TODO: Still optimization possible when searching virtual quantities
-                    for element in self.browse(cr, uid, product_ids, context=context):
-                        if eval(str(element[field]) + operator + str(value)):
-                            ids.append(element.id)
-                    res.append(('id', 'in', ids))
+
+            # if name in ('qty_available', 'incoming_qty', 'outgoing_qty') and (value != 0.0 or operator not in  ('==', '>=', '<=')):
+                # res.append(('id', 'in', self._search_qty_available(cr, uid, operator, value, context)))
+            #if name in ('qty_available', 'incoming_qty', 'outgoing_qty'):
+            res.append(('id', 'in', self._search_qty(cr, uid, field, operator, value, context)))
+            # else:
+            #     start = timeit.default_timer()
+            #     product_ids = self.search(cr, uid, [], context=context)
+            #     if product_ids:
+            #         #TODO: Still optimization possible when searching virtual quantities
+            #         measure(impl)
+            #         res.append(('id', 'in', ids))
+            #     stop = timeit.default_timer()
+            #     logger.critical(
+            #         '{ "imp": "%s", "duration": "%s", "fun": "%s", " nb prod_ids": "%s" }'
+            #      % ('Python', stop - start, '_product_available', len(ids)))
+            #     start = timeit.default_timer()
+            #     new_query_ids = self._search_qty(cr, uid, field, operator, value, context)
+            #     stop = timeit.default_timer()
+            #     logger.critical(
+            #         '{ "imp": "%s", "duration": "%s", "fun": "%s", " nb prod_ids": "%s" }'
+            #      % ('SQL', stop - start, '_product_available', len(new_query_ids)))
+            #     diff_id = list(set(ids) ^ set(new_query_ids))
+            #     ## ---> Set BreakPoint
+            #     import pdb;
+            #     pdb.set_trace()
+            #     diff_val = {}
+            #     for d_id in diff_id:
+            #         diff_val[d_id]=qty_odoo[d_id]['virtual_available']
+            #     print "################################ diff %s" % len(diff_id)
+            #     print ("ssssssssssssoooonnnnnnnnnn field : %s, operator : %s,"" value : %s," % (field, operator, value,))
+            #     print diff_val
+            #     # TODO complete _search_virtual_qty method
+            #     # res.append(('id', 'in', self._search_qty(cr, uid, field, operator, value, context)))
+
+        return res
+
+    def _search_qty(self, cr, uid, field, operator, value, context):
+        context = context or {}
+        domain_move_in, domain_move_out, domain_quant = self._get_product_qyt_domain(cr, uid, [], context=context)
+        res = {}
+        if field == 'incoming_qty':
+            res = self.blazzing_fast_read_group(cr, uid, 'stock.move', domain_move_in, context=context, having=[(field, operator, value)])
+        elif field == 'outgoing_qty':
+            res = self.blazzing_fast_read_group(cr, uid, 'stock.move', domain_move_out, context=context, having=[(field, operator, value)])
+        elif field == 'qty_available':
+            res = self.blazzing_fast_read_group(cr, uid, 'stock.quant', domain_quant, context=context, having=[(field, operator, value)])
+        elif field == 'virtual_available':
+            res = self._search_virtual_qty(cr, uid, domain_move_in, domain_move_out, domain_quant, context=context, domain_virtual_qty=[(field, operator, value)])
+
+        # value == 0 must also inculd all product without stock move or quants
+        unmoved_prod = {}
+        if value == 0.0 and operator in ('==', '>=', '<='):
+            if field == 'incoming_qty':
+                unmoved_prod = self._get_unmoved_product(
+                    cr, uid, 'stock.quant', domain_move_in, context=context)
+            elif field == 'outgoing_qty':
+                unmoved_prod = self._get_unmoved_product(
+                    cr, uid, 'stock.move', domain_move_out, context=context)
+            elif field == 'qty_available':
+                unmoved_prod = self._get_unmoved_product(
+                    cr, uid, 'stock.move', domain_quant, context=context)
+
+        res = list(res) + list(unmoved_prod)
         return res
 
     def _search_qty_available(self, cr, uid, operator, value, context):
