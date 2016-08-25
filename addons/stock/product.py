@@ -313,8 +313,7 @@ class product_product(osv.osv):
             where_clause_params_v_qty.append(value)
         v_qty_clause = v_qty_conditions and (' WHERE ' + ' AND '.join(v_qty_conditions)) or ''
 
-        v_qty_query = """SELECT query_quant.product_id as id,
-            (query_quant.quantity + query_in.quantity - query_out.quantity) as quantity FROM
+        v_qty_query = """SELECT query_quant.product_id as id, (query_quant.quantity + query_in.quantity - query_out.quantity) as quantity FROM
                 (%(query_quant)s) AS query_quant 
                 INNER JOIN (%(query_in)s) AS query_in 
                 ON query_in.product_id = query_quant.product_id
@@ -361,7 +360,7 @@ class product_product(osv.osv):
         context = context or {}
         query, where_clause_params = self._get_unmoved_product_query(cr, uid, model_name, domain, context=context)
         cr.execute(query, where_clause_params)
-        return cr.fetchall()
+        return dict(cr.fetchall())
 
     def _search_product_quantity(self, cr, uid, obj, name, domain, context):
         res = []
