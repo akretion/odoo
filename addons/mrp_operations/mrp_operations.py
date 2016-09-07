@@ -99,7 +99,7 @@ class mrp_production_workcenter_line(osv.osv):
        'production_state':fields.related('production_id','state',
             type='selection',
             selection=[('draft','Draft'),('confirmed','Waiting Goods'),('ready','Ready to Produce'),('in_production','In Production'),('cancel','Canceled'),('done','Done')],
-            string='Production Status', readonly=True),
+            string='Production Status', readonly=True, store=True),
        'product':fields.related('production_id','product_id',type='many2one',relation='product.product',string='Product',
             readonly=True),
        'qty':fields.related('production_id','product_qty',type='float',string='Qty',readonly=True, store=True),
