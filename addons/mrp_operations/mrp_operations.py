@@ -140,7 +140,7 @@ class mrp_production_workcenter_line(osv.osv):
                         moves = production.move_lines + production.move_created_ids
                         # If tracking is activated, we want to make sure the user will enter the
                         # serial numbers.
-                        if moves.filtered(lambda r: r.product_id.tracking != 'none'):
+                        if moves.filtered(lambda r: r.product_id.tracking != 'none' and not r.restrict_lot_id):
                             button_produce_done = False
                         else:
                             prod_obj_pool.action_produce(cr,uid, production.id, production.product_qty, 'consume_produce', context = None)
