@@ -530,7 +530,7 @@ class product_template(osv.osv):
 
         # related to display product product information if is_product_variant
         'barcode': fields.related('product_variant_ids', 'barcode', type='char', string='Barcode', oldname='ean13'),
-        'default_code': fields.related('product_variant_ids', 'default_code', type='char', string='Internal Reference'),
+        'default_code': fields.related('product_variant_ids', 'default_code', type='char', string='Internal Reference', store=True),
         'item_ids': fields.one2many('product.pricelist.item', 'product_tmpl_id', 'Pricelist Items'),
     }
 
