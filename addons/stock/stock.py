@@ -2180,7 +2180,7 @@ class stock_move(osv.osv):
         query = """
             SELECT stock_picking.id FROM stock_picking, stock_move
             WHERE
-                stock_picking.state in ('draft', 'confirmed', 'waiting') AND
+                stock_picking.state in ('draft', 'confirmed', 'waiting', 'partially_available', 'assigned') AND
                 stock_move.picking_id = stock_picking.id AND
                 stock_move.location_id = %s AND
                 stock_move.location_dest_id = %s AND
