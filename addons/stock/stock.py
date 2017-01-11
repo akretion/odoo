@@ -2901,7 +2901,8 @@ class stock_move(osv.osv):
         }, context=ctx)
 
         if move.move_dest_id and move.propagate and move.move_dest_id.state not in ('done', 'cancel'):
-            new_move_prop = self.split(cr, uid, move.move_dest_id, qty, context=context)
+            move_dest_lot_id = move.move_dest_id.restrict_lot_id and move.move_dest_id.restrict_lot_id.id or False
+            new_move_prop = self.split(cr, uid, move.move_dest_id, qty, restrict_lot_id=move_dest_lot_id, context=context)
             self.write(cr, uid, [new_move], {'move_dest_id': new_move_prop}, context=context)
         #returning the first element of list returned by action_confirm is ok because we checked it wouldn't be exploded (and
         #thus the result of action_confirm should always be a list of 1 element length)
