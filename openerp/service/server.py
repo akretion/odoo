@@ -77,6 +77,9 @@ class BaseWSGIServerNoBind(LoggingBaseWSGIServerMixIn, werkzeug.serving.BaseWSGI
 
 
 class RequestHandler(werkzeug.serving.WSGIRequestHandler):
+
+    protocol_version = 'HTTP/1.1'
+
     def setup(self):
         # flag the current thread as handling a http request
         super(RequestHandler, self).setup()
