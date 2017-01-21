@@ -61,13 +61,22 @@ class LoggingBaseWSGIServerMixIn(object):
             return
         _logger.exception('Exception happened during processing of request from %s', client_address)
 
+class HttpRequestHandler(werkzeug.serving.WSGIRequestHandler):
+
+    protocol_version = 'HTTP/1.1'
+
+
 class BaseWSGIServerNoBind(LoggingBaseWSGIServerMixIn, werkzeug.serving.BaseWSGIServer):
     """ werkzeug Base WSGI Server patched to skip socket binding. PreforkServer
     use this class, sets the socket and calls the process_request() manually
     """
     def __init__(self, app):
-        werkzeug.serving.BaseWSGIServer.__init__(self, "127.0.0.1", 0, app)
-        # Directly close the socket. It will be replaced by WorkerHTTP when processing requests
+        werkzeug.serving.BaseWSGIServer.__init__(
+            self, "1", "1", app, handler=HttpRequestHandler)
+
+    def server_bind(self):
+        # we dont bind beause we use the listen socket of PreforkServer#socket
+        # instead we close the socket
         if self.socket:
             self.socket.close()
 
@@ -76,9 +85,7 @@ class BaseWSGIServerNoBind(LoggingBaseWSGIServerMixIn, werkzeug.serving.BaseWSGI
         pass
 
 
-class RequestHandler(werkzeug.serving.WSGIRequestHandler):
-
-    protocol_version = 'HTTP/1.1'
+class RequestHandler(HttpRequestHandler):
 
     def setup(self):
         # flag the current thread as handling a http request
