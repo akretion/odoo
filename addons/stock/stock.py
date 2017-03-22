@@ -428,9 +428,11 @@ class stock_quant(osv.osv):
 
     def move_quants_write(self, cr, uid, quants, move, location_dest_id, dest_package_id, context=None):
         context=context or {}
+        # CUSTOM OSKAB (operation_id added) we put it here to avoid doing 2 writes
         vals = {'location_id': location_dest_id.id,
                 'history_ids': [(4, move.id)],
-                'reservation_id': False}
+                'reservation_id': False,
+                'operation_id': False}
         if not context.get('entire_pack'):
             vals.update({'package_id': dest_package_id})
         self.write(cr, SUPERUSER_ID, [q.id for q in quants], vals, context=context)
