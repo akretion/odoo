@@ -696,6 +696,10 @@ class product_product(osv.osv):
         if context is None:
             context = {}
 
+        #Patch to fix sandard price calculation for logistiflex. (multi_company_supplier)
+        if not context.get('uid', False):
+            context['uid'] = uid
+
         if 'currency_id' in context:
             pricetype_obj = self.pool.get('product.price.type')
             price_type_id = pricetype_obj.search(cr, uid, [('field','=',ptype)])[0]
