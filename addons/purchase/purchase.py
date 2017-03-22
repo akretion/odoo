@@ -814,6 +814,10 @@ class purchase_order(osv.osv):
                             field_val = field_val.id
                         o_line[field] = field_val
                     o_line['uom_factor'] = order_line.product_uom and order_line.product_uom.factor or 1.0
+                # Patch to fix manual merge. Depends of purchase_auto_merge which add procurement_ids field in purchase line
+                proc_vals = [(4, p.id) for p in order_line.procurement_ids]
+                if proc_vals:
+                    o_line['procurement_ids'] = proc_vals
 
 
 
