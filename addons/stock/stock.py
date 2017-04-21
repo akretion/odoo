@@ -621,7 +621,8 @@ class stock_quant(osv.osv):
                 self.pool.get('stock.picking').write(cr, uid, [move.picking_id.id], {'recompute_pack_op': True}, context=context)
             if move.partially_available:
                 self.pool.get("stock.move").write(cr, uid, [move.id], {'partially_available': False}, context=context)
-            self.write(cr, SUPERUSER_ID, related_quants, {'reservation_id': False}, context=context)
+            # CUSTOM OSKAB (operation_id added) we put it here to avoid doing 2 writes (on do_transfer, picking is re-reserved, so we risk to have unreserved quant with operation_id without this fix
+            self.write(cr, SUPERUSER_ID, related_quants, {'reservation_id': False, 'operation_id': False}, context=context)
 
     def _quants_get_order(self, cr, uid, location, product, quantity, domain=[], orderby='in_date', context=None):
         ''' Implementation of removal strategies
