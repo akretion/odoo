@@ -160,7 +160,7 @@ class procurement_order(osv.osv):
         wf_service = netsvc.LocalService("workflow")
 
         warehouse_ids = warehouse_obj.search(cr, uid, [], context=context)
-        products_ids = product_obj.search(cr, uid, [], order='id', context=context)
+        products_ids = product_obj.search(cr, uid, [('procure_method', '=', 'make_to_stock')], order='id', context=context)
 
         for warehouse in warehouse_obj.browse(cr, uid, warehouse_ids, context=context):
             context['warehouse'] = warehouse
