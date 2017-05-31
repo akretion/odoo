@@ -707,7 +707,7 @@ class stock_picking(osv.osv):
             ("invoiced", "Invoiced"),
             ("2binvoiced", "To Be Invoiced"),
             ("none", "Not Applicable")], "Invoice Control",
-            select=True, required=True, readonly=True, track_visibility='onchange', states={'draft': [('readonly', False)]}),
+            select=True, required=True, track_visibility='onchange'),
         'company_id': fields.many2one('res.company', 'Company', required=True, select=True, states={'done':[('readonly', True)], 'cancel':[('readonly',True)]}),
     }
     _defaults = {
