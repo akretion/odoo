@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 ##############################################################################
 #
-# Copyright (c) 2010 Camptocamp SA (http://www.camptocamp.com) 
+# Copyright (c) 2010 Camptocamp SA (http://www.camptocamp.com)
 # All Right Reserved
 #
 # Author : Nicolas Bessi (Camptocamp)
@@ -81,6 +81,11 @@ class HeaderHTML(osv.osv):
                 ('Legal', 'Legal    3   8.5 x 14 inches, 215.9 x 355.6 mm'),
                 ('Letter','Letter 2 8.5 x 11 inches, 215.9 x 279.4 mm'),
                 ('Tabloid', 'Tabloid 29 279.4 x 431.8 mm'),
+                ('19x51', '19x51'),
+                ('32x57', '32x57'),
+                ('36x89', '36x89'),
+                ('41x89', '41x89'),
+                ('54x101', '54x101'),
                 ],
                 'Paper size',
                 required=True,
