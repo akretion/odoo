@@ -545,16 +545,22 @@
             <field name="model">product.template</field>
             <field name="inherit_id" ref="product.product_template_form_view"/>
             <field name="arch" type="xml">
-                <group name="inventory" position="after">
-                    <separator string="Vendors"/>
-                    <field name="seller_ids" context="{'default_product_tmpl_id': context.get('product_tmpl_id', active_id)}"/>
-                    <group name="packaging" string="Packaging"
-                        colspan="4"
-                        attrs="{'invisible':[('type', 'not in', ['product', 'consu'])]}"
-                        groups="product.group_stock_packaging">
-                        <field name="packaging_ids" nolabel="1"/>
-                    </group>
-                </group>
+                <page name="sales" position="after">
+                    <page string="Purchase" name="purchase" attrs="{'invisible': [('purchase_ok','=',False)]}">
+                        <group string="Vendors" name="vendors" attrs="{'invisible': [('product_variant_count','&gt;',1)]}">
+                            <field name="seller_ids" context="{'default_product_tmpl_id':context.get('product_tmpl_id',active_id)}" nolabel="1"/>
+                        </group>
+                        <group string="Vendors" name="variant_vendors" attrs="{'invisible': [('product_variant_count','&lt;=',1)]}">
+                            <field name="variant_seller_ids" context="{'default_product_tmpl_id': context.get('product_tmpl_id', active_id)}, 'tree_view_ref': 'product.product_supplierinfo_tree_view'" nolabel="1"/>
+                        </group>
+			<group name="packaging" string="Packaging"
+		    	   colspan="4"
+		    	   attrs="{'invisible':[('type', 'not in', ['product', 'consu'])]}"
+		    	   groups="product.group_stock_packaging">
+		    	   <field name="packaging_ids" nolabel="1"/>
+                        </group>
+                    </page>
+                </page>
                 <field name="uom_po_id" position="after">
                     <field name="purchase_method" widget="radio" groups="purchase.group_purchase_manager"/>
                 </field>
