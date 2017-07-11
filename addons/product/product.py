@@ -862,6 +862,27 @@ class product_product(osv.osv):
     _inherit = ['mail.thread']
     _order = 'default_code,name_template'
 
+
+    # Custom oskab to remove in v10 since it will be native
+    def _get_seller(self, cr, uid, product, qty=0.0, partner_id=False, context=None):
+        if context is None: 
+            context = {}
+        date = context.get('date', fields.date.context_today(self, cr, uid, context=context))
+        res = False
+        if partner_id:
+            partner = self.pool['res.partner'].browse(cr, uid, partner_id, context=context)
+        for seller in product.seller_ids:
+            if seller.date_start and seller.date_start > date:
+                continue
+            if seller.date_end and seller.date_end < date:
+                continue
+            if partner_id and seller.name not in [partner, partner.parent_id]:
+                continue
+
+            res = seller
+            break
+        return res
+
     def _product_price(self, cr, uid, ids, name, arg, context=None):
         plobj = self.pool.get('product.pricelist')
         res = {}
