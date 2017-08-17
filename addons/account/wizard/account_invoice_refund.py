@@ -222,9 +222,7 @@ class account_invoice_refund(osv.osv_memory):
             id = result and result[1] or False
 
             result = act_obj.read(cr, uid, [id], context=context)[0]
-            invoice_domain = eval(result['domain'])
-            invoice_domain.append(('id', 'in', created_inv))
-            result['domain'] = invoice_domain
+            result['domain'] = [('id', 'in', created_inv)]
             return result
 
     def invoice_refund(self, cr, uid, ids, context=None):
