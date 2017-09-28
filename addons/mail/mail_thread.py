@@ -494,6 +494,11 @@ class mail_thread(osv.AbstractModel):
                 return value.name_get()[0][1]
             if col_info['type'] == 'selection':
                 return dict(col_info['selection'])[value]
+            if col_info['type'] == 'many2many':
+                res = []
+                for val in value:
+                    res.append(val.name_get()[0][1])
+                return ', '.join(res)
             return value
 
         def format_message(message_description, tracked_values):
