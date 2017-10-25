@@ -180,6 +180,7 @@ class stock_return_picking(osv.osv_memory):
                                         'type': new_type,
                                         'date':date_cur, 
                                         'invoice_state': data['invoice_state'],
+                                        'carrier_id': False,
         })
         
         val_id = data['product_return_moves']
