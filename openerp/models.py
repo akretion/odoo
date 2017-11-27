@@ -399,7 +399,7 @@ class BaseModel(object):
         ir_model_fields_obj = self.pool.get('ir.model.fields')
 
         # sparse field should be created at the end, as it depends on its serialized field already existing
-        model_fields = sorted(self._fields.items(), key=lambda x: 1 if x[1].type == 'sparse' else 0)
+        model_fields = sorted(self._fields.items(), key=lambda x: 1 if hasattr(x[1], 'sparse') and x[1].sparse else 0)
         for (k, f) in model_fields:
             vals = {
                 'model_id': model_id,
@@ -422,9 +422,9 @@ class BaseModel(object):
                 'column1': f.type == 'many2many' and f.column1 or None,
                 'column2': f.type == 'many2many' and f.column2 or None,
             }
-            if getattr(f, 'serialization_field', None):
+            if getattr(f, 'sparse', None):
                 # resolve link to serialization_field if specified by name
-                serialization_field_id = ir_model_fields_obj.search(cr, SUPERUSER_ID, [('model','=',vals['model']), ('name', '=', f.serialization_field)])
+                serialization_field_id = ir_model_fields_obj.search(cr, SUPERUSER_ID, [('model','=',vals['model']), ('name', '=', f.sparse)])
                 if not serialization_field_id:
                     raise UserError(_("Serialization field `%s` not found for sparse field `%s`!") % (f.serialization_field, k))
                 vals['serialization_field_id'] = serialization_field_id[0]
@@ -466,7 +466,6 @@ class BaseModel(object):
             _logger.warning("In model %r, field %r overriding existing value", cls._name, name)
         setattr(cls, name, field)
         cls._fields[name] = field
-
         # basic setup of field
         field.setup_base(self, name)
 
@@ -697,6 +696,20 @@ class BaseModel(object):
                 'readonly': bool(field['readonly']),
             }
             # FIXME: ignore field['serialization_field_id']
+            if field['serialization_field_id']:
+                # Fields are not fully set up yet, we can't really rely on the orm yet to get record values
+                self.env.cr.execute("""
+                    SELECT name FROM ir_model_fields WHERE id = %s
+                """, (field['serialization_field_id'],))
+                res_sql = self.env.cr.fetchall()
+                field_name = res_sql and res_sql[0] and res_sql[0][0]
+                attrs['sparse'] = field_name
+                # sparse_search if implemented in base_sparse_field_search
+                # module, so this part is ignored until it is installed
+                # I still think it is better to put the sparse_search feature
+                # In a different module since it will be the case in version 11
+                if field.get('sparse_search', False):
+                    attrs['sparse_search'] = True
             if field['ttype'] in ('char', 'text', 'html'):
                 attrs['translate'] = bool(field['translate'])
                 attrs['size'] = field['size'] or None
