@@ -1334,7 +1334,8 @@ class procurement_order(osv.osv):
                 purchase_line_obj.write(cr, uid, [procurement.purchase_line_id.id], {'product_qty': new_qty, 'price_unit': new_price}, context=context)
             if float_compare(new_qty, 0.0, precision_rounding=procurement.product_uom.rounding) != 1:
                 purchase_line_obj.action_cancel(cr, uid, [procurement.purchase_line_id.id], context=context)
-                purchase_line_obj.unlink(cr, uid, [procurement.purchase_line_id.id], context=context)
+                 # We want to keep a trace of the canceled purchase_line...
+#                purchase_line_obj.unlink(cr, uid, [procurement.purchase_line_id.id], context=context)
         return super(procurement_order, self).propagate_cancel(cr, uid, procurement, context=context)
 
     def _run(self, cr, uid, procurement, context=None):
