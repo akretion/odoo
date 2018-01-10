@@ -5790,15 +5790,16 @@ class BaseModel(object):
                 if f.store and self.env.field_todo(f)
             ]
             for rec in recs:
-                try:
-                    values = rec._convert_to_write({
-                        name: rec[name] for name in names
-                    })
-                    with rec.env.norecompute():
-                        map(rec._recompute_done, field.computed_fields)
-                        rec._write(values)
-                except MissingError:
-                    pass
+                if rec.exists():
+                    try:
+                        values = rec._convert_to_write({
+                            name: rec[name] for name in names
+                        })
+                        with rec.env.norecompute():
+                            map(rec._recompute_done, field.computed_fields)
+                            rec._write(values)
+                    except MissingError:
+                        pass
             # mark the computed fields as done
             map(recs._recompute_done, field.computed_fields)
 
