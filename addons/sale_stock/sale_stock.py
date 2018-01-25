@@ -26,6 +26,9 @@ from openerp.tools.safe_eval import safe_eval as eval
 from openerp.tools.translate import _
 import pytz
 from openerp import SUPERUSER_ID
+from openerp import api
+from openerp import fields as newfields
+
 
 class sale_order(osv.osv):
     _inherit = "sale.order"
@@ -465,6 +468,20 @@ class stock_location_route(osv.osv):
 class stock_picking(osv.osv):
     _inherit = "stock.picking"
 
+    sale_id = newfields.Many2one(
+        'sale.order',
+        "Sale Order",
+        compute='_compute_sale_id',
+        store=True)
+
+    @api.depends('move_lines.procurement_id.sale_line_id.order_id')
+    def _compute_sale_id(self):
+        for picking in self:
+            for move in picking.move_lines:
+                if move.procurement_id.sale_line_id:
+                    picking.sale_id = move.procurement_id.sale_line_id.order_id
+                    break
+
     def _get_partner_to_invoice(self, cr, uid, picking, context=None):
         """ Inherit the original function of the 'stock' module
             We select the partner of the sales order as the partner of the customer invoice
@@ -477,21 +494,6 @@ class stock_picking(osv.osv):
                     saleorder = saleorders[0]
                     return saleorder.partner_invoice_id.id
         return super(stock_picking, self)._get_partner_to_invoice(cr, uid, picking, context=context)
-    
-    def _get_sale_id(self, cr, uid, ids, name, args, context=None):
-        sale_obj = self.pool.get("sale.order")
-        res = {}
-        for picking in self.browse(cr, uid, ids, context=context):
-            res[picking.id] = False
-            if picking.group_id:
-                sale_ids = sale_obj.search(cr, uid, [('procurement_group_id', '=', picking.group_id.id)], context=context)
-                if sale_ids:
-                    res[picking.id] = sale_ids[0]
-        return res
-    
-    _columns = {
-        'sale_id': fields.function(_get_sale_id, type="many2one", relation="sale.order", string="Sale Order"),
-    }
 
     def _create_invoice_from_picking(self, cr, uid, picking, vals, context=None):
         sale_obj = self.pool.get('sale.order')
