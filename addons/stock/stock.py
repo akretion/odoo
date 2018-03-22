@@ -788,6 +788,7 @@ class stock_picking(models.Model):
                 stock_move
             where
                 picking_id IN %s
+                and state not in ('done', 'cancel')
             group by
                 picking_id""", (tuple(ids),))
         for pick, dt1, dt2, prio in cr.fetchall():
