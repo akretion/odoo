@@ -59,6 +59,7 @@ class MrpBom(models.Model):
         'res.company', 'Company',
         default=lambda self: self.env['res.company']._company_default_get('mrp.bom'),
         required=True)
+    notes = fields.Html()
 
     @api.constrains('product_id', 'product_tmpl_id', 'bom_line_ids')
     def _check_product_recursion(self):

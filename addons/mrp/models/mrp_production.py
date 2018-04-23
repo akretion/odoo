@@ -163,6 +163,7 @@ class MrpProduction(models.Model):
     is_locked = fields.Boolean('Is Locked', default=True, copy=False)
     show_final_lots = fields.Boolean('Show Final Lots', compute='_compute_show_lots')
     production_location_id = fields.Many2one('stock.location', "Production Location", related='product_id.property_stock_production')
+    notes = fields.Html()
 
     @api.depends('product_id.tracking')
     def _compute_show_lots(self):
