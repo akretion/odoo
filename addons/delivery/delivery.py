@@ -65,7 +65,7 @@ class delivery_carrier(osv.osv):
                     available = True
                   except osv.except_osv, e:
                     # no suitable delivery method found, probably configuration error
-                    _logger.error("Carrier %s: %s\n%s" % (carrier.name, e.name, e.value))
+                    _logger.debug("Carrier %s: %s\n%s" % (carrier.name, e.name, e.value))
                     price = 0.0
               else:
                   price = 0.0
