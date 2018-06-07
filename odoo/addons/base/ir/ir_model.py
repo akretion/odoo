@@ -696,6 +696,8 @@ class IrModelFields(models.Model):
         if field_data['compute']:
             attrs['compute'] = make_compute(field_data['compute'], field_data['depends'])
 
+        if field_data.get('sparse'):
+            attrs['sparse'] = field_data['sparse']
         return fields.Field.by_type[field_data['ttype']](**attrs)
 
 
