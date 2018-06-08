@@ -566,7 +566,13 @@ class AccountBankStatementLine(models.Model):
         """
         # Blue lines = payment on bank account not assigned to a statement yet
         reconciliation_aml_accounts = [self.journal_id.default_credit_account_id.id, self.journal_id.default_debit_account_id.id]
-        domain_reconciliation = ['&', ('statement_id', '=', False), ('account_id', 'in', reconciliation_aml_accounts)]
+        # AKRETION HACK 11/7/2017
+        # Remove ('payment_id','<>', False) in order to allow to select move lines
+        # generated from payment orders or check deposit
+        # but I add ('journal_id', '=', self.journal_id.id) to exclude the
+        # opening entry of the first fiscal year
+        #domain_reconciliation = ['&', '&', ('statement_id', '=', False), ('account_id', 'in', reconciliation_aml_accounts), ('payment_id','<>', False)]
+        domain_reconciliation = ['&', '&', ('statement_id', '=', False), ('account_id', 'in', reconciliation_aml_accounts), ('journal_id', '=', self.journal_id.id)]
 
         # Black lines = unreconciled & (not linked to a payment or open balance created by statement
         domain_matching = [('reconciled', '=', False)]
@@ -593,7 +599,6 @@ class AccountBankStatementLine(models.Model):
         else:
             additional_domain = expression.normalize_domain(additional_domain)
         domain = expression.AND([domain, additional_domain])
-
         return self.env['account.move.line'].search(domain, offset=offset, limit=limit, order="date_maturity asc, id asc")
 
     def _get_common_sql_query(self, overlook_partner = False, excluded_ids = None, split = False):
@@ -1008,7 +1013,7 @@ class AccountBankStatementLine(models.Model):
             #record the move name on the statement line to be able to retrieve it in case of unreconciliation
             self.write({'move_name': move.name})
             payment.write({'payment_reference': move.name})
-        elif self.move_name:
-            raise UserError(_('Operation not allowed. Since your statement line already received a number, you cannot reconcile it entirely with existing journal entries otherwise it would make a gap in the numbering. You should book an entry and make a regular revert of it in case you want to cancel it.'))
+        #elif self.move_name:
+        #    raise UserError(_('Operation not allowed. Since your statement line already received a number, you cannot reconcile it entirely with existing journal entries otherwise it would make a gap in the numbering. You should book an entry and make a regular revert of it in case you want to cancel it.'))
         counterpart_moves.assert_balanced()
         return counterpart_moves
