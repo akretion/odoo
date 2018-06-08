@@ -76,7 +76,7 @@ var abstractReconciliation = Widget.extend(ControlPanelMixin, {
         this.model_res_users = new Model("res.users");
         this.model_tax = new Model("account.tax");
         this.model_presets = new Model("account.reconcile.model");
-        this.max_move_lines_displayed = 5;
+        this.max_move_lines_displayed = 15;
         // Number of reconciliations loaded initially and by clicking 'show more'
         this.num_reconciliations_fetched_in_batch = 10;
         this.animation_speed = 100; // "Blocking" animations
@@ -1757,7 +1757,7 @@ var bankStatementReconciliationLine = abstractReconciliationLine.extend({
             relation: "res.partner",
             string: _t("Partner"),
             type: "many2one",
-            domain: [['parent_id','=',false], '|', ['customer','=',true], ['supplier','=',true]],
+            domain: [['parent_id','=',false]],  // AKRETION HACK 26/6/2017 allow all parent partners
             help: "",
             readonly: false,
             required: true,
