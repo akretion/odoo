@@ -216,15 +216,11 @@ class Registry(Mapping):
             cr.execute('SELECT * FROM ir_model_fields WHERE state=%s', ('manual',))
             for field in cr.dictfetchall():
                 dic[field['model']][field['name']] = field
+        id2fieldname = {vals['id']: key for key, vals in self._fields_by_model[model_name].items()}
         for key in self._fields_by_model[model_name]:
-            if self._fields_by_model[model_name][key].get('serialization_field_id'):
-                serialization_field = False
-                serialization_field_id = self._fields_by_model[model_name][key]['serialization_field_id']
-                for k, v in self._fields_by_model[model_name].iteritems():
-                    if v['id'] == serialization_field_id:
-                        serialization_field = k
-                if serialization_field:
-                    self._fields_by_model[model_name][key]['sparse'] = serialization_field
+            field = self._fields_by_model[model_name][key]
+            if field.get('serialization_field_id'):
+                field['sparse'] = id2fieldname[field['serialization_field_id']]
         return self._fields_by_model[model_name]
 
     def do_parent_store(self, cr):
