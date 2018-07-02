@@ -36,9 +36,9 @@ class Users(models.Model):
         self.SELF_READABLE_FIELDS.extend(['notify_email', 'alias_domain', 'alias_name'])
         return init_res
 
-    def _auto_init(self, cr, context=None):
-        """ Installation hook: aliases """
-        return self.pool.get('mail.alias').migrate_to_alias(cr, self._name, self._table, super(Users, self)._auto_init, self._name, self._columns['alias_id'], 'login', alias_force_key='id', context=context)
+#    def _auto_init(self, cr, context=None):
+#        """ Installation hook: aliases """
+#        return self.pool.get('mail.alias').migrate_to_alias(cr, self._name, self._table, super(Users, self)._auto_init, self._name, self._columns['alias_id'], 'login', alias_force_key='id', context=context)
 
     @api.model
     def create(self, values):
