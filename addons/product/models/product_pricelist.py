@@ -93,31 +93,24 @@ class Pricelist(models.Model):
                 results[product_id][pricelist.id] = price
         return results
 
-    @api.multi
-    def _compute_price_rule(self, products_qty_partner, date=False, uom_id=False):
-        """ Low-level method - Mono pricelist, multi products
-        Returns: dict{product_id: (price, suitable_rule) for the given pricelist}
-
-        If date in context: Date of the pricelist (%Y-%m-%d)
-
-            :param products_qty_partner: list of typles products, quantity, partner
-            :param datetime date: validity date
-            :param ID uom_id: intermediate unit of measure
+    def _rule_query(self):
+        return """
+            SELECT item.id
+            FROM product_pricelist_item AS item
+            LEFT JOIN product_category AS categ
+            ON item.categ_id = categ.id
+            WHERE (item.product_tmpl_id IS NULL OR item.product_tmpl_id = any(%(prod_tmpl_ids)s))
+            AND (item.product_id IS NULL OR item.product_id = any(%(prod_ids)s))
+            AND (item.categ_id IS NULL OR item.categ_id = any(%(categ_ids)s))
+            AND (item.pricelist_id = %(pricelist_id)s)
+            AND (item.date_start IS NULL OR item.date_start<=%(date)s)
+            AND (item.date_end IS NULL OR item.date_end>=%(date)s)
+            ORDER BY item.applied_on, item.min_quantity desc, categ.parent_left desc
         """
-        self.ensure_one()
+
+    def _rule_params(self, products, date=False):
         if not date:
             date = self._context.get('date') or fields.Date.context_today(self)
-        if not uom_id and self._context.get('uom'):
-            uom_id = self._context['uom']
-        if uom_id:
-            # rebrowse with uom if given
-            products = [item[0].with_context(uom=uom_id) for item in products_qty_partner]
-            products_qty_partner = [(products[index], data_struct[1], data_struct[2]) for index, data_struct in enumerate(products_qty_partner)]
-        else:
-            products = [item[0] for item in products_qty_partner]
-
-        if not products:
-            return {}
 
         categ_ids = {}
         for p in products:
@@ -137,20 +130,39 @@ class Pricelist(models.Model):
             prod_ids = [product.id for product in products]
             prod_tmpl_ids = [product.product_tmpl_id.id for product in products]
 
+        return {'prod_tmpl_ids': prod_tmpl_ids, 'prod_ids': prod_ids,
+                'categ_ids': categ_ids, 'pricelist_id': self.id, 'date': date}
+
+    @api.multi
+    def _compute_price_rule(self, products_qty_partner, date=False, uom_id=False):
+        """ Low-level method - Mono pricelist, multi products
+        Returns: dict{product_id: (price, suitable_rule) for the given pricelist}
+
+        If date in context: Date of the pricelist (%Y-%m-%d)
+
+            :param products_qty_partner: list of typles products, quantity, partner
+            :param datetime date: validity date
+            :param ID uom_id: intermediate unit of measure
+        """
+        self.ensure_one()
+        if not uom_id and self._context.get('uom'):
+            uom_id = self._context['uom']
+        if uom_id:
+            # rebrowse with uom if given
+            products = [item[0].with_context(uom=uom_id) for item in products_qty_partner]
+            products_qty_partner = [(products[index], data_struct[1], data_struct[2]) for index, data_struct in enumerate(products_qty_partner)]
+        else:
+            products = [item[0] for item in products_qty_partner]
+
+        if not products:
+            return {}
+
+        is_product_template = products[0]._name == "product.template"
+
+        query = self._rule_query()
+        params = self._rule_params(products, date=date)
         # Load all rules
-        self._cr.execute(
-            'SELECT item.id '
-            'FROM product_pricelist_item AS item '
-            'LEFT JOIN product_category AS categ '
-            'ON item.categ_id = categ.id '
-            'WHERE (item.product_tmpl_id IS NULL OR item.product_tmpl_id = any(%s))'
-            'AND (item.product_id IS NULL OR item.product_id = any(%s))'
-            'AND (item.categ_id IS NULL OR item.categ_id = any(%s)) '
-            'AND (item.pricelist_id = %s) '
-            'AND (item.date_start IS NULL OR item.date_start<=%s) '
-            'AND (item.date_end IS NULL OR item.date_end>=%s)'
-            'ORDER BY item.applied_on, item.min_quantity desc, categ.parent_left desc',
-            (prod_tmpl_ids, prod_ids, categ_ids, self.id, date, date))
+        self._cr.execute(query, params)
 
         item_ids = [x[0] for x in self._cr.fetchall()]
         items = self.env['product.pricelist.item'].browse(item_ids)
