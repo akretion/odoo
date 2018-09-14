@@ -618,6 +618,13 @@ class BaseModel(MetaModel('DummyModel', (object,), {'_register': False})):
     def _is_an_ordinary_table(self):
         return tools.table_kind(self.env.cr, self._table) == 'r'
 
+    def _generate_xml_id(self, record):
+        return '%s_%s_%s' % (
+            record._table,
+            record.id,
+            uuid.uuid4().hex[:8],
+        )
+
     def __ensure_xml_id(self, skip=False):
         """ Create missing external ids for records in ``self``, and return an
             iterator of pairs ``(record, xmlid)`` for the records in ``self``.
@@ -661,11 +668,7 @@ class BaseModel(MetaModel('DummyModel', (object,), {'_register': False})):
             )
 
         xids.update(
-            (r.id, (modname, '%s_%s_%s' % (
-                r._table,
-                r.id,
-                uuid.uuid4().hex[:8],
-            )))
+            (r.id, (modname, self._generate_xml_id(r)))
             for r in missing
         )
         fields = ['module', 'model', 'name', 'res_id']
