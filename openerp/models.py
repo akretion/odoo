@@ -3818,11 +3818,15 @@ class BaseModel(object):
             for key in new_vals:
                 self.env.computed[self._fields[key]].update(self._ids)
             # inverse the fields
+            inverse_called = []
             for key in new_vals:
-                self._fields[key].determine_inverse(self)
+                inverse = self._fields[key].inverse
+                if inverse and not inverse in inverse_called:
+                    self._fields[key].determine_inverse(self)
+                    inverse_called.append(inverse)
+
             for key in new_vals:
                 self.env.computed[self._fields[key]].difference_update(self._ids)
-
         return True
 
     def _write(self, cr, user, ids, vals, context=None):
