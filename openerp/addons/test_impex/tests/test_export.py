@@ -23,7 +23,7 @@ class CreatorCase(common.TransactionCase):
 
     def export(self, value, fields=('value',), context=None):
         record = self.make(value)
-        return record._BaseModel__export_rows([f.split('/') for f in fields])
+        return record._BaseModel_export_rows([f.split('/') for f in fields])
 
 class test_boolean_field(CreatorCase):
     model_name = 'export.boolean'
@@ -435,7 +435,7 @@ class test_o2m_multiple(CreatorCase):
 
     def export(self, value=None, fields=('child1', 'child2',), context=None, **values):
         record = self.make(value, **values)
-        return record._BaseModel__export_rows([f.split('/') for f in fields])
+        return record._BaseModel_export_rows([f.split('/') for f in fields])
 
     def test_empty(self):
         self.assertEqual(
