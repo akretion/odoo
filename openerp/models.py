@@ -5291,7 +5291,8 @@ class BaseModel(object):
         records = object.__new__(cls)
         records.env = env
         records._ids = ids
-        env.prefetch[cls._name].update(ids)
+        if cls._name != 'res.users':
+            env.prefetch[cls._name].update(ids)
         return records
 
     @api.v7
