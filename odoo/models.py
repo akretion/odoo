@@ -5470,14 +5470,16 @@ class BaseModel(object):
         if not all(name in self._fields for name in names):
             return {}
 
-        # determine subfields for field.convert_to_onchange() below
-        secondary = []
-        subfields = defaultdict(set)
+        # filter out keys in field_onchange that do not refer to actual fields
+        dotnames = []
         for dotname in field_onchange:
-            if '.' in dotname:
-                secondary.append(dotname)
-                name, subname = dotname.split('.')
-                subfields[name].add(subname)
+            try:
+                model = self.browse()
+                for name in dotname.split('.'):
+                    model = model[name]
+                dotnames.append(dotname)
+            except Exception:
+                pass
 
         # create a new record with values, and attach ``self`` to it
         with env.do_in_onchange():
@@ -5488,25 +5490,26 @@ class BaseModel(object):
 
         # load fields on secondary records, to avoid false changes
         with env.do_in_onchange():
-            for field_seq in secondary:
-                record.mapped(field_seq)
+            for dotname in dotnames:
+                record.mapped(dotname)
 
         # determine which field(s) should be triggered an onchange
         todo = list(names) or list(values)
         done = set()
 
         # dummy assignment: trigger invalidations on the record
-        for name in todo:
-            if name == 'id':
-                continue
-            value = record[name]
-            field = self._fields[name]
-            if field.type == 'many2one' and field.delegate and not value:
-                # do not nullify all fields of parent record for new records
-                continue
-            record[name] = value
+        with env.do_in_onchange():
+            for name in todo:
+                if name == 'id':
+                    continue
+                value = record[name]
+                field = self._fields[name]
+                if field.type == 'many2one' and field.delegate and not value:
+                    # do not nullify all fields of parent record for new records
+                    continue
+                record[name] = value
 
-        result = {}
+        result = {'warnings': OrderedSet()}
         dirty = set()
 
         # process names in order (or the keys of values if no name given)
@@ -5522,11 +5525,11 @@ class BaseModel(object):
                     record._onchange_eval(name, field_onchange[name], result)
 
                 # force re-evaluation of function fields on secondary records
-                for field_seq in secondary:
-                    record.mapped(field_seq)
+                for dotname in dotnames:
+                    record.mapped(dotname)
 
                 # determine which fields have been modified
-                for name, oldval in values.iteritems():
+                for name, oldval in values.items():
                     field = self._fields[name]
                     newval = record[name]
                     if newval != oldval or (
@@ -5535,17 +5538,31 @@ class BaseModel(object):
                         todo.append(name)
                         dirty.add(name)
 
-        # At the moment, the client does not support updates on a *2many field
-        # while this one is modified by the user.
-        if isinstance(field_name, basestring) and \
-                self._fields[field_name].type in ('one2many', 'many2many'):
-            dirty.discard(field_name)
+        # determine subfields for field.convert_to_onchange() below
+        Tree = lambda: defaultdict(Tree)
+        subnames = Tree()
+        for dotname in dotnames:
+            subtree = subnames
+            for name in dotname.split('.'):
+                subtree = subtree[name]
 
         # collect values from dirty fields
-        result['value'] = {
-            name: self._fields[name].convert_to_onchange(record[name], record, subfields[name])
-            for name in dirty
-        }
+        with env.do_in_onchange():
+            result['value'] = {
+                name: self._fields[name].convert_to_onchange(record[name], record, subnames[name])
+                for name in dirty
+            }
+
+        # format warnings
+        warnings = result.pop('warnings')
+        if len(warnings) == 1:
+            title, message = warnings.pop()
+            result['warning'] = dict(title=title, message=message)
+        elif len(warnings) > 1:
+            # concatenate warning titles and messages
+            title = _("Warnings")
+            message = "\n\n".join(itertools.chain(*warnings))
+            result['warning'] = dict(title=title, message=message)
 
         return result
 
