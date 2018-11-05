@@ -115,11 +115,11 @@ class procurement_order(osv.osv):
         'origin': fields.char('Source Document',
             help="Reference of the document that created this Procurement.\n"
             "This is automatically completed by Odoo."),
-        'company_id': fields.many2one('res.company', 'Company', required=True),
+        'company_id': fields.many2one('res.company', 'Company', required=True, index=True),
 
         # These two fields are used for shceduling
         'priority': fields.selection(PROCUREMENT_PRIORITIES, 'Priority', required=True, select=True, track_visibility='onchange'),
-        'date_planned': fields.datetime('Scheduled Date', required=True, select=True, track_visibility='onchange'),
+        'date_planned': fields.datetime('Scheduled Date', required=True, select=True, track_visibility='onchange', index=True),
 
         'group_id': fields.many2one('procurement.group', 'Procurement Group'),
         'rule_id': fields.many2one('procurement.rule', 'Rule', track_visibility='onchange', help="Chosen rule for the procurement resolution. Usually chosen by the system but can be manually set by the procurement manager to force an unusual behavior."),
@@ -137,7 +137,7 @@ class procurement_order(osv.osv):
             ('exception', 'Exception'),
             ('running', 'Running'),
             ('done', 'Done')
-        ], 'Status', required=True, track_visibility='onchange', copy=False),
+        ], 'Status', required=True, track_visibility='onchange', copy=False, index=True),
     }
 
     _defaults = {
@@ -324,6 +324,11 @@ class procurement_order(osv.osv):
         @param context: A standard dictionary for contextual values
         @return:  Dictionary of values
         '''
+        # START CUSTOM : ADD DATE INTERVAL
+        date_min = datetime.datetime.now() - datetime.timedelta(weeks=1)
+        date_max = datetime.datetime.now() + datetime.timedelta(weeks=2)
+        date_min = date_min.strftime('%m-%d-%Y')
+        date_max = date_max.strftime('%m-%d-%Y')
         if context is None:
             context = {}
         try:
@@ -332,6 +337,11 @@ class procurement_order(osv.osv):
 
             # Run confirmed procurements
             dom = [('state', '=', 'confirmed')]
+            # START CUSTOM
+            if date_min:
+                dom += [('date_planned', '>', date_min)]
+            if date_max:
+                dom += [('date_planned', '<', date_max)]
             if company_id:
                 dom += [('company_id', '=', company_id)]
             prev_ids = []
@@ -348,6 +358,11 @@ class procurement_order(osv.osv):
             # Check if running procurements are done
             offset = 0
             dom = [('state', '=', 'running')]
+            # START CUSTOM
+            if date_min:
+                dom += [('date_planned', '>', date_min)]
+            if date_max:
+                dom += [('date_planned', '<', date_max)]
             if company_id:
                 dom += [('company_id', '=', company_id)]
             prev_ids = []
