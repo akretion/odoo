@@ -49,7 +49,7 @@ class Pricelist(models.Model):
                        FROM ((
                                 SELECT pr.id, pr.name
                                 FROM product_pricelist pr JOIN
-                                     res_currency cur ON 
+                                     res_currency cur ON
                                          (pr.currency_id = cur.id)
                                 WHERE pr.name || ' (' || cur.name || ')' = %(name)s
                             )
@@ -62,7 +62,7 @@ class Pricelist(models.Model):
                                         tr.name = 'product.pricelist,name' AND
                                         tr.lang = %(lang)s
                                      ) JOIN
-                                     res_currency cur ON 
+                                     res_currency cur ON
                                          (pr.currency_id = cur.id)
                                 WHERE tr.value || ' (' || cur.name || ')' = %(name)s
                             )
@@ -105,6 +105,8 @@ class Pricelist(models.Model):
             :param ID uom_id: intermediate unit of measure
         """
         self.ensure_one()
+        info = []  # Used for understand computing
+        info.append("initial prd by partn %s" % products_qty_partner)
         if not date:
             date = self._context.get('date') or fields.Date.context_today(self)
         if not uom_id and self._context.get('uom'):
@@ -116,6 +118,7 @@ class Pricelist(models.Model):
         else:
             products = [item[0] for item in products_qty_partner]
 
+        info.append('products: %s' % [x.name for x in products])
         if not products:
             return {}
 
@@ -126,6 +129,8 @@ class Pricelist(models.Model):
                 categ_ids[categ.id] = True
                 categ = categ.parent_id
         categ_ids = categ_ids.keys()
+        info.append("categs %s " % [
+            x.name for x in self.env['product.category'].browse(categ_ids)])
 
         is_product_template = products[0]._name == "product.template"
         if is_product_template:
@@ -137,6 +142,9 @@ class Pricelist(models.Model):
             prod_ids = [product.id for product in products]
             prod_tmpl_ids = [product.product_tmpl_id.id for product in products]
 
+        info.append('products: %s, templates %s' % (
+            [x.name for x in self.env['product.product'].browse(prod_ids)],
+            [x.name for x in self.env['product.template'].browse(prod_tmpl_ids)]))
         # Load all rules
         self._cr.execute(
             'SELECT item.id '
@@ -154,6 +162,7 @@ class Pricelist(models.Model):
 
         item_ids = [x[0] for x in self._cr.fetchall()]
         items = self.env['product.pricelist.item'].browse(item_ids)
+        import pdb; pdb.set_trace()
         results = {}
         for product, qty, partner in products_qty_partner:
             results[product.id] = 0.0
@@ -172,25 +181,35 @@ class Pricelist(models.Model):
                 except UserError:
                     # Ignored - incompatible UoM in context, use default product UoM
                     pass
-
             # if Public user try to access standard price from website sale, need to call price_compute.
             # TDE SURPRISE: product can actually be a template
             price = product.price_compute('list_price')[product.id]
 
             price_uom = self.env['product.uom'].browse([qty_uom_id])
+            import pdb; pdb.set_trace()
+            info.append(u'Condition of unchecked rule:')
+            unmatch_reason = {}
             for rule in items:
+                rule_str = u'%s qty %s, applied on %s, price %s' % (
+                    rule.name, rule.min_quantity, rule.applied_on, rule.fixed_price)
+                unmatch_reason[rule_str] = False
                 if rule.min_quantity and qty_in_product_uom < rule.min_quantity:
+                    unmatch_reason[rule_str] = u"rule '%s' have lower quantity " % rule.name
                     continue
                 if is_product_template:
                     if rule.product_tmpl_id and product.id != rule.product_tmpl_id.id:
+                        unmatch_reason[rule_str] = u"rule '%s': product_tmpl_id doesn't match rule (is_tmpl)" % rule.name
                         continue
                     if rule.product_id and not (product.product_variant_count == 1 and product.product_variant_id.id == rule.product_id.id):
                         # product rule acceptable on template if has only one variant
+                        unmatch_reason[rule_str] = u"rule '%s' product_id doesn't match rule or several products by tmpl (is_tmpl)" % rule.name
                         continue
                 else:
                     if rule.product_tmpl_id and product.product_tmpl_id.id != rule.product_tmpl_id.id:
+                        unmatch_reason[rule_str] = u"rule '%s'  product_tmpl_id doesn't match rule (not is_tmpl)" % rule.name
                         continue
                     if rule.product_id and product.id != rule.product_id.id:
+                        unmatch_reason[rule_str] = u"rule '%s'  product_id doesn't match rule (not is_tmpl)" % rule.name
                         continue
 
                 if rule.categ_id:
@@ -236,13 +255,16 @@ class Pricelist(models.Model):
                             price_max_margin = convert_to_price_uom(rule.price_max_margin)
                             price = min(price, price_limit + price_max_margin)
                     suitable_rule = rule
+                info.append(u'Rule check' % unmatch_reason)
                 break
             # Final price conversion into pricelist currency
             if suitable_rule and suitable_rule.compute_price != 'fixed' and suitable_rule.base != 'pricelist':
                 price = product.currency_id.compute(price, self.currency_id, round=False)
 
             results[product.id] = (price, suitable_rule and suitable_rule.id or False)
+        print '\n'.join([str(x) for x in info])
 
+        import pdb; pdb.set_trace()
         return results
 
     # New methods: product based
