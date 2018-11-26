@@ -1303,10 +1303,20 @@ class account_move(osv.osv):
                     return False
         return True
 
+    def _check_date(self, cr, uid, ids, context=None):
+        for m in self.browse(cr, uid, ids, context=context):
+            if m.journal_id.allow_date:
+                if m.date < m.period_id.date_start or m.date > m.period_id.date_stop:
+                    return False
+        return True
+
     _constraints = [
         (_check_centralisation,
             'You cannot create more than one move per period on a centralized journal.',
             ['journal_id']),
+        (_check_date,
+            'The date of your Journal Entry is not in the defined period! You should change the date or remove this constraint from the journal.',
+            ['date', 'period_id']),
     ]
 
     def post(self, cr, uid, ids, context=None):
