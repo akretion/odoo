@@ -253,7 +253,7 @@ class MergePartnerAutomatic(models.TransientModel):
                 records_ref.sudo().write(values)
 
     @api.model
-    def _update_values(self, src_partners, dst_partner):
+    def _get_update_values(self, src_partners, dst_partner):
         """ Update values of dst_partner with the ones from the src_partners.
             :param src_partners : recordset of source res.partner
             :param dst_partner : record of destination res.partner
@@ -278,13 +278,13 @@ class MergePartnerAutomatic(models.TransientModel):
         # remove fields that can not be updated (id and parent_id)
         values.pop('id', None)
         parent_id = values.pop('parent_id', None)
-        dst_partner.write(values)
         # try to update the parent_id
         if parent_id and parent_id != dst_partner.id:
             try:
                 dst_partner.write({'parent_id': parent_id})
             except ValidationError:
                 _logger.info('Skip recursive partner hierarchies for parent_id %s of partner: %s', parent_id, dst_partner.id)
+        return values
 
     def _merge(self, partner_ids, dst_partner=None):
         """ private implementation of merge partner
@@ -307,7 +307,7 @@ class MergePartnerAutomatic(models.TransientModel):
             raise UserError(_("You cannot merge a contact with one of his parent."))
 
         # check only admin can merge partners with different emails
-        if SUPERUSER_ID != self.env.uid and len(set(partner.email for partner in partner_ids)) > 1:
+        if SUPERUSER_ID != self.env.uid and len(set(partner.email for partner in partner_ids if partner.email)) > 1:
             raise UserError(_("All contacts must have the same email. Only the Administrator can merge contacts with different emails."))
 
         # remove dst_partner from partners to merge
@@ -319,20 +319,28 @@ class MergePartnerAutomatic(models.TransientModel):
             src_partners = ordered_partners[:-1]
         _logger.info("dst_partner: %s", dst_partner.id)
 
-        # FIXME: is it still required to make and exception for account.move.line since accounting v9.0 ?
-        if SUPERUSER_ID != self.env.uid and 'account.move.line' in self.env and self.env['account.move.line'].sudo().search([('partner_id', 'in', [partner.id for partner in src_partners])]):
-            raise UserError(_("Only the destination contact may be linked to existing Journal Items. Please ask the Administrator if you need to merge several contacts linked to existing Journal Items."))
+        # Ensure that we are not setting contact on account move line
+        if ('account.move.line' in self.env
+                and dst_partner.parent_id
+                and self.env['account.move.line'].sudo().search([
+                    ('partner_id', 'in', src_partners.ids)])):
+            raise UserError(
+                _("Destination partner is a contact and can not be linked to Journal Item"))
+
 
         # call sub methods to do the merge
         self._update_foreign_keys(src_partners, dst_partner)
         self._update_reference_fields(src_partners, dst_partner)
-        self._update_values(src_partners, dst_partner)
+        values = self._get_update_values(src_partners, dst_partner)
 
         _logger.info('(uid = %s) merged the partners %r with %s', self._uid, src_partners.ids, dst_partner.id)
         dst_partner.message_post(body='%s %s' % (_("Merged with the following partners:"), ", ".join('%s <%s> (ID %s)' % (p.name, p.email or 'n/a', p.id) for p in src_partners)))
 
         # delete source partner, since they are merged
         src_partners.unlink()
+
+        # write the value after the delete to avoid all constraint issue
+        dst_partner.write(values)
 
     # ----------------------------------------
     # Helpers
