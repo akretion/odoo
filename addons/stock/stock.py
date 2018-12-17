@@ -1315,6 +1315,12 @@ class stock_picking(osv.osv):
                             break
                         if quant.id in quants_in_package_done:
                             continue
+                        # CUSTOM : tricky bug, if we have 2 moves for the same products, taking in different location, the link between the operation and the move
+                        # may be wrong. Indeed, there is no check on the location. The link will be made between the current ops and the first quants we find.
+                        # even if the quant concerns another location (and so another operation).
+                        # I guess the bug is gone in version 12 since stock_move_operation_link has been replaced, but we should check this carefully during the migration
+                        if quant.location_id.id != ops.location_id.id:
+                            continue
 
                         #check if the quant is matching the operation details
                         if ops.package_id:
