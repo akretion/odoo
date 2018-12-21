@@ -154,6 +154,18 @@ class WebKitParser(report_sxw):
         file_to_del.append(stderr_path)
         try:
             status = subprocess.call(command, stderr=stderr_fd)
+            # Sometime, bug happens when generating PO order confirmation pdf
+            # example on PO95046. Seems to be this bug : https://github.com/wkhtmltopdf/wkhtmltopdf/issues/2684
+            # adjusting the margin-top fixes it. This is an ugly workaround but it will be removed
+            # on migration of course, which hopefully will happens soon...
+            nb_count = 0
+            while status == -11 and nb_count < 12:
+                nb_count += 1
+                if len(command) > 9 and command[8] == '--margin-top':
+                    margin_top = float(command[9])
+                    margin_top = margin_top + nb_count * 0.2
+                    command[9] = str(margin_top)
+                    status = subprocess.call(command, stderr=stderr_fd)
             os.close(stderr_fd) # ensure flush before reading
             stderr_fd = None # avoid closing again in finally block
             fobj = open(stderr_path, 'r')
