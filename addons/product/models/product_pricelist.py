@@ -154,6 +154,8 @@ class Pricelist(models.Model):
 
         item_ids = [x[0] for x in self._cr.fetchall()]
         items = self.env['product.pricelist.item'].browse(item_ids)
+        infos = {'tmpl': prod_tmpl_ids, 'prod_ids': prod_ids, 'categ_ids': categ_ids, 'item': self.id, 'date': date}
+        self.help4priceitems(items, infos)
         results = {}
         for product, qty, partner in products_qty_partner:
             results[product.id] = 0.0
@@ -244,6 +246,23 @@ class Pricelist(models.Model):
             results[product.id] = (price, suitable_rule and suitable_rule.id or False)
 
         return results
+
+    def help4priceitems(self, items, infos):
+        # env['product.pricelist'].browse(115).price_rule_get(7685,1,112742)
+        if not items:
+            return
+        print 'infos:', infos
+        print 'items number', len(items)
+        item_fields = ['id', 'fixed_price', 'price_discount', 'percent_price',
+                       'compute_price', 'base', 'price_surcharge',
+                       'price_round', 'company_id', 'pricelist_id',
+                       'date_end', 'date_start', 'applied_on', 'price']
+        for item in items:
+            data = {}
+            for f in item_fields:
+                if item[f] or item[f] == 0.0:
+                    data[f] = item[f]
+            print '\n\n', data
 
     # New methods: product based
     def get_products_price(self, products, quantities, partners, date=False, uom_id=False):
