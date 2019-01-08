@@ -5538,6 +5538,11 @@ class BaseModel(object):
                         todo.append(name)
                         dirty.add(name)
 
+        # At the moment, the client does not support updates on a *2many field
+        # while this one is modified by the user.
+        if isinstance(field_name, basestring) and \
+                self._fields[field_name].type in ('one2many', 'many2many'):
+            dirty.discard(field_name)
         # determine subfields for field.convert_to_onchange() below
         Tree = lambda: defaultdict(Tree)
         subnames = Tree()
