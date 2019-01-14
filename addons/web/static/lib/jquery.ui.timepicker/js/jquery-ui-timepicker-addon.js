@@ -176,7 +176,10 @@ $.extend(Timepicker.prototype, {
 				});
 			tp_inst._defaults.timezoneList = timezoneList;
 		}
-
+        // Custom oskab
+        // Reset default stepMinute to 1
+        tp_inst._defaults.stepMinute = 1;
+        // End custom
 		tp_inst.hour = tp_inst._defaults.hour;
 		tp_inst.minute = tp_inst._defaults.minute;
 		tp_inst.second = tp_inst._defaults.second;
@@ -1266,7 +1269,7 @@ $.datepicker._optionDatepicker = function(target, name, value) {
 	var inst = this._getInst(target),
 		tp_inst = this._get(inst, 'timepicker');
 	if (tp_inst) {
-		var min,max,onselect;
+		var min,max,onselect,stepminute; // Custom oskab stepminute
 		if (typeof name == 'string') { // if min/max was set with the string
 			if (name==='minDate' || name==='minDateTime' )
 				min = value;
@@ -1302,6 +1305,12 @@ $.datepicker._optionDatepicker = function(target, name, value) {
 		}
 		else if (onselect)
 			tp_inst._defaults.onSelect=onselect;
+        // Custom oskab
+        // add stepMinute from options in xml view"
+        if (name === 'stepMinute')
+            stepminute=value;
+            tp_inst._defaults.stepMinute=stepminute;
+        // End custom
 	}
 	if (value === undefined)
 		return this._base_optionDatepicker(target, name);
