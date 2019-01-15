@@ -179,6 +179,8 @@ $.extend(Timepicker.prototype, {
         // Custom oskab
         // Reset default stepMinute to 1
         tp_inst._defaults.stepMinute = 1;
+        tp_inst._defaults.hourMin = 0;
+        tp_inst._defaults.hourMax = 23;
         // End custom
 		tp_inst.hour = tp_inst._defaults.hour;
 		tp_inst.minute = tp_inst._defaults.minute;
@@ -1269,7 +1271,7 @@ $.datepicker._optionDatepicker = function(target, name, value) {
 	var inst = this._getInst(target),
 		tp_inst = this._get(inst, 'timepicker');
 	if (tp_inst) {
-		var min,max,onselect,stepminute; // Custom oskab stepminute
+		var min,max,onselect,stepminute,hourmin,hourmax; // Custom oskab stepminute
 		if (typeof name == 'string') { // if min/max was set with the string
 			if (name==='minDate' || name==='minDateTime' )
 				min = value;
@@ -1307,9 +1309,16 @@ $.datepicker._optionDatepicker = function(target, name, value) {
 			tp_inst._defaults.onSelect=onselect;
         // Custom oskab
         // add stepMinute from options in xml view"
-        if (name === 'stepMinute')
+        if (name === 'stepMinute') {
             stepminute=value;
             tp_inst._defaults.stepMinute=stepminute;
+        } else if (name === 'hourMin') {
+            hourmin=value;
+            tp_inst._defaults.hourMin=hourmin;
+        } else if (name === 'hourMax') {
+            hourmax=value;
+            tp_inst._defaults.hourMax=hourmax;
+        }
         // End custom
 	}
 	if (value === undefined)
