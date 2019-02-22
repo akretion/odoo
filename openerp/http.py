@@ -320,8 +320,15 @@ class WebRequest(object):
                 # For example some auth='none' controllers do "request.uid = request.session.uid" then
                 # "request.env.user ..." which is broken if we create the environment by doing self.env.clear()
                 # since it will not be linked to a user.
-                if self.__dict__.get('env'):
-                    self.env.clear()
+#                if self.__dict__.get('env'):
+#                    self.env.clear()
+                # CUSTOM : The Odoo commit 29c00a56daa3 changed the behaviors trying to invalidate the cache
+                # Only if the env exist, but it does not work. As a result, the cache is not cleaned
+                # on conccurent update which leads to disastrous behaviors.
+                # I put back the old behavior force the env cleaning always. It may provoke issue about
+                # some auth='none' controllers, link said in odoo comment above, but we should not need
+                # this at SD
+                self.env.clear()
             result = self.endpoint(*a, **kw)
             if isinstance(result, Response) and result.is_qweb:
                 # Early rendering of lazy responses to benefit from @service_model.check protection
