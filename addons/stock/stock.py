@@ -1470,7 +1470,22 @@ class stock_picking(osv.osv):
                     elif move.state == 'draft':
                         toassign_move_ids.append(move.id)
                     if float_compare(remaining_qty, 0,  precision_rounding = move.product_id.uom_id.rounding) == 0:
-                        if move.state in ('draft', 'assigned', 'confirmed'):
+                        # CUSTOM FIX add waiting to the list because I do not see why it is the only ongoing state
+                        # not took into account. I guess, it is just history...In v10 it is still the same.
+                        # If I am wrong and there is a reason for not having the waiting state here, I guess it won't
+                        # be worse than the case we have today...
+                        # It cause an important though very rare issue. If we have an operation linked to a waiting move
+                        # (because the quant of the move was moved by someone during preparation for instance...)
+                        # The move won't be transfered. It will appear in a backorder. Its stock_move_link_operation
+                        # will be still exists thought. Which lead to an incoherence of data. Picking A is linked to Operation
+                        # A, linked to move_line A, linked to stock_move B linked to backorder picking B...
+                        # This make the picking B not ever transferable without data modification in database directly...
+                        # and the product is not shipped in Odoo even it has physically been sent.
+                        # In Odoo 12, all of this is gone, but I guess we should still test this case somehow to be sure not
+                        # to have the same annoying bug. To test : Create picking with a make to order product. Make it ready
+                        # with normal buying process. Then create the stock_move_line and all as if you had complete the preparation. 
+                        # Then move the product somewhere else (so the move go back to waiting state) then transfer the picking.
+                        if move.state in ('draft', 'assigned', 'confirmed', 'waiting'):
                             todo_move_ids.append(move.id)
                     elif float_compare(remaining_qty,0, precision_rounding = move.product_id.uom_id.rounding) > 0 and \
                                 float_compare(remaining_qty, move.product_qty, precision_rounding = move.product_id.uom_id.rounding) < 0:
