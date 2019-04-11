@@ -135,7 +135,7 @@ var FormView = BasicView.extend({
         if (!limit && attrs.widget === 'many2many_tags') {
             limit = 1000;
         }
-        attrs.limit = limit || 40;
+        attrs.limit = limit || 60;
     },
 });
 
