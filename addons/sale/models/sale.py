@@ -26,6 +26,8 @@ class SaleOrder(models.Model):
     def _default_validity_date(self):
         if self.env['ir.config_parameter'].sudo().get_param('sale.use_quotation_validity_days'):
             days = self.env.user.company_id.quotation_validity_days
+            # Je fais un faux patch
+            print('mon patch est un print')
             if days > 0:
                 return fields.Date.to_string(datetime.now() + timedelta(days))
         return False
