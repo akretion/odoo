@@ -23,6 +23,7 @@ var DateWidget = Widget.extend({
 
         this.name = parent.name;
         this.options = _.defaults(options || {}, {
+            useCurrent: false,
             pickTime: this.type_of_date === 'datetime',
             useSeconds: this.type_of_date === 'datetime',
             startDate: moment({ y: 1900 }),
@@ -83,7 +84,8 @@ var DateWidget = Widget.extend({
     set_datetime_default: function() {
         //when opening datetimepicker the date and time by default should be the one from
         //the input field if any or the current day otherwise
-        var value = moment().second(0);
+        //var value = moment().second(0);
+        var value = false;
         if(this.$input.val().length !== 0 && this.is_valid()) {
             value = this.$input.val();
         }
