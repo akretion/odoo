@@ -1320,6 +1320,10 @@ class BaseModel(object):
             if field and field.company_dependent:
                 defaults[name] = self.env['ir.property'].get(name, self._name)
                 continue
+            # Do not try to migrate this to 12, no need.
+            if field and field.warehouse_dependent:
+                defaults[name] = self.env['ir.property'].get_wh(name, self._name)
+                continue
 
             # 4. look up field.default
             if field and field.default:
