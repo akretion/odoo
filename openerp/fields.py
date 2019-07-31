@@ -314,6 +314,7 @@ class Field(object):
         'related': None,                # sequence of field names, for related fields
         'related_sudo': True,           # whether related fields should be read as admin
         'company_dependent': False,     # whether ``self`` is company-dependent (property field)
+        'warehouse_dependent': False,   # whether ``self`` is warehouse-dependent (propertywh field)
         'default': None,                # default(recs) returns the default value
 
         'string': None,                 # field label
@@ -670,6 +671,7 @@ class Field(object):
     _description_depends = property(attrgetter('depends'))
     _description_related = property(attrgetter('related'))
     _description_company_dependent = property(attrgetter('company_dependent'))
+    _description_warehouse_dependent = property(attrgetter('warehouse_dependent'))
     _description_readonly = property(attrgetter('readonly'))
     _description_required = property(attrgetter('required'))
     _description_states = property(attrgetter('states'))
@@ -726,6 +728,11 @@ class Field(object):
             args['type'] = self.type
             args['relation'] = self.comodel_name
             self.column = fields.property(**args)
+        if self.warehouse_dependent:
+            # company-dependent fields are mapped to former property fields
+            args['type'] = self.type
+            args['relation'] = self.comodel_name
+            self.column = fields.propertywh(**args)
         elif self.column:
             # let the column provide a valid column for the given parameters
             self.column = self.column.new(_computed_field=bool(self.compute), **args)
