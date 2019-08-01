@@ -1757,6 +1757,64 @@ class property(function):
         )
 
 
+# No need to migrate this. It is an ugly copy paste directly here because there is not point
+# in losing time doing it properly, outside of odoo native code for an obsolete api in a obsolete
+# version ! We do something cleaner in v12, in a separated module.
+class propertywh(function):
+    __slots__ = []
+
+    def to_field_args(self):
+        args = super(propertywh, self).to_field_args()
+        args['warehouse_dependent'] = True
+        return args
+
+    def _property_search(self, tobj, cr, uid, obj, name, domain, context=None):
+        ir_property = obj.pool['ir.property']
+        result = []
+        for field, operator, value in domain:
+            result += ir_property.search_multi(cr, uid, name, tobj._name, operator, value, context=context)
+        return result
+
+    def _property_write(self, obj, cr, uid, id, prop_name, value, obj_dest, context=None):
+        ir_property = obj.pool['ir.property']
+        ir_property.set_multi_wh(cr, uid, prop_name, obj._name, {id: value}, context=context)
+        return True
+
+    def _property_read(self, obj, cr, uid, ids, prop_names, obj_dest, context=None):
+        ir_property = obj.pool['ir.property']
+
+        res = {id: {} for id in ids}
+        for prop_name in prop_names:
+            field = obj._fields[prop_name]
+            values = ir_property.get_multi_wh(cr, uid, prop_name, obj._name, ids, context=context)
+            if field.type == 'many2one':
+                # name_get the non-null values as SUPERUSER_ID
+                vals = sum(set(filter(None, values.itervalues())),
+                           obj.pool[field.comodel_name].browse(cr, uid, [], context=context))
+                vals_name = dict(vals.sudo().name_get()) if vals else {}
+                for id, value in values.iteritems():
+                    ng = False
+                    if value and value.id in vals_name:
+                        ng = value.id, vals_name[value.id]
+                    res[id][prop_name] = ng
+            else:
+                for id, value in values.iteritems():
+                    res[id][prop_name] = value
+
+        return res
+
+    def __init__(self, **args):
+        args = dict(args)
+        args['obj'] = args.pop('relation', '') or args.get('obj', '')
+        super(propertywh, self).__init__(
+            fnct=self._property_read,
+            fnct_inv=self._property_write,
+            fnct_search=self._property_search,
+            multi='properties',
+            **args
+        )
+
+
 class column_info(object):
     """ Struct containing details about an osv column, either one local to
         its model, or one inherited via _inherits.
