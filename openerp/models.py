@@ -2513,8 +2513,9 @@ class BaseModel(object):
                         f_pg_type = res['typname']
                         f_pg_size = res['size']
                         f_pg_notnull = res['attnotnull']
+                        # Avoid deletion of warehouse dependent fields, like it will be natively in v12
                         if isinstance(f, fields.function) and not f.store and\
-                                not getattr(f, 'nodrop', False):
+                                not getattr(f, 'nodrop', False) and not isinstance(f, fields.propertywh):
                             _logger.info('column %s (%s) converted to a function, removed from table %s',
                                          k, f.string, self._table)
                             cr.execute('ALTER TABLE "%s" DROP COLUMN "%s" CASCADE' % (self._table, k))

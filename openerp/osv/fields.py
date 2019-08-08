@@ -1772,7 +1772,7 @@ class propertywh(function):
         ir_property = obj.pool['ir.property']
         result = []
         for field, operator, value in domain:
-            result += ir_property.search_multi(cr, uid, name, tobj._name, operator, value, context=context)
+            result += ir_property.search_multi_wh(cr, uid, name, tobj._name, operator, value, context=context)
         return result
 
     def _property_write(self, obj, cr, uid, id, prop_name, value, obj_dest, context=None):
@@ -1810,7 +1810,7 @@ class propertywh(function):
             fnct=self._property_read,
             fnct_inv=self._property_write,
             fnct_search=self._property_search,
-            multi='properties',
+            multi='wh_properties',
             **args
         )
 
