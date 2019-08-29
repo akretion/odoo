@@ -703,7 +703,7 @@ class purchase_order(osv.osv):
 
     def action_picking_create(self, cr, uid, ids, context=None):
         picking_ids = []
-        for order in self.browse(cr, uid, ids):
+        for order in self.browse(cr, uid, ids, context=context):
             picking_ids.extend(self._create_pickings(cr, uid, order, order.order_line, None, context=context))
 
         # Must return one unique picking ID: the one to connect in the subflow of the purchase order.
