@@ -358,9 +358,38 @@ class AccountMove(models.Model):
         for move in self:
             if move.line_ids:
                 if not all([x.company_id.id == move.company_id.id for x in move.line_ids]):
-                    raise UserError(_("Cannot create moves for different companies."))
+                    infos = self._explain_post_validate_exception(move.line_ids)
+                    raise UserError(_("Cannot create moves for different companies.\n\nYou'll probably find reason with data below:\n%s " % infos))
         self.assert_balanced()
         return self._check_lock_date()
+
+    @api.model
+    def _explain_post_validate_exception(self, move_lines):
+        # get all foreign key fields which have company_id field
+        infos = [
+            [(ml[fi].company_id.name, ml[fi], ml[fi][ml[fi]._rec_name])
+              # display (company_name, record, record._rec_name)
+              for fi in ml._fields
+              # we only need m2o towards model with company_id
+              if ml._fields[fi].type == 'many2one' and ml[fi] and \
+                  hasattr(ml[fi], 'company_id')]
+             for ml in move_lines
+        ]
+        # get all these fields grouped by company name
+        info = ""
+        from collections import defaultdict
+        cpny_dict = defaultdict(list)
+        for line in infos:
+            # each field def is 3 members tuple
+            for ttuple in line:
+                cpny_dict[ttuple[0]].append(
+                    {ttuple[1]: "%s (%s)" % (
+                        ttuple[2], _(ttuple[1]._description))})
+        # we set data to flat string format:
+        for key, val in cpny_dict.items():
+            info += "\nData with company ** %s **:\n" % key
+            info += "  %s\n" % val
+        return info
 
     @api.multi
     def _check_lock_date(self):
