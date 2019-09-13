@@ -604,7 +604,7 @@ instance.web_kanban.KanbanGroup = instance.web.Widget.extend({
             }
             _.each(this.view.aggregates, function(value, key) {
                 // CUSTOM OSKAB set float_time widget for kanban view in assembly view
-                if (key == 'theorical_estimated_duration_hours') {
+                if (['theorical_estimated_duration_hours', 'reception_theorical_duration_hours'].indexOf(key) >= 0) {
                     self.aggregates[value] = instance.web.format_value(group.get('aggregates')[key], {type: 'float_time'});
                 } else {
                     self.aggregates[value] = instance.web.format_value(group.get('aggregates')[key], {type: 'float'});
