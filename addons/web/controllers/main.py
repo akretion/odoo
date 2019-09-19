@@ -783,6 +783,7 @@ class Session(http.Controller):
             "db": request.session.db,
             "username": request.session.login,
             "company_id": request.env.user.company_id.id if request.session.uid else None,
+            "warehouse_id": request.env.user.warehouse_id.id if request.session.uid else None, #CUSTOM oskab to remove in v12
         }
 
     @http.route('/web/session/get_session_info', type='json', auth="none")
