@@ -779,19 +779,26 @@ class stock_picking(models.Model):
             res[id] = {'min_date': False, 'max_date': False, 'priority': '1'}
         if not ids:
             return res
-        cr.execute("""select
+        # Manage case when there are done/cancel moves and ongoing moves
+        # in a same picking.
+        cr.execute("""select distinct on (picking_id)
                 picking_id,
                 min(date_expected),
                 max(date_expected),
-                max(priority)
+                max(priority),
+                CASE
+                    WHEN state = 'cancel' THEN 1
+                    WHEN state = 'done' THEN 2
+                    ELSE 3
+                END as state_order
             from
                 stock_move
             where
                 picking_id IN %s
-                and state not in ('done', 'cancel')
             group by
-                picking_id""", (tuple(ids),))
-        for pick, dt1, dt2, prio in cr.fetchall():
+                picking_id, state_order
+            ORDER BY picking_id, state_order desc""", (tuple(ids),))
+        for pick, dt1, dt2, prio, dummy in cr.fetchall():
             res[pick]['min_date'] = dt1
             res[pick]['max_date'] = dt2
             res[pick]['priority'] = prio
