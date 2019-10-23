@@ -99,7 +99,7 @@ class mrp_production_workcenter_line(osv.osv):
        'production_state':fields.related('production_id','state',
             type='selection',
             selection=[('draft','Draft'),('confirmed','Waiting Goods'),('ready','Ready to Produce'),('in_production','In Production'),('cancel','Canceled'),('done','Done')],
-            string='Production Status', readonly=True),
+            string='Production Status', readonly=True, store=True),
        'product':fields.related('production_id','product_id',type='many2one',relation='product.product',string='Product',
             readonly=True),
        'qty':fields.related('production_id','product_qty',type='float',string='Qty',readonly=True, store=True),
@@ -140,7 +140,7 @@ class mrp_production_workcenter_line(osv.osv):
                         moves = production.move_lines + production.move_created_ids
                         # If tracking is activated, we want to make sure the user will enter the
                         # serial numbers.
-                        if moves.filtered(lambda r: r.product_id.tracking != 'none'):
+                        if moves.filtered(lambda r: r.product_id.tracking != 'none' and not r.restrict_lot_id):
                             button_produce_done = False
                         else:
                             prod_obj_pool.action_produce(cr,uid, production.id, production.product_qty, 'consume_produce', context = None)

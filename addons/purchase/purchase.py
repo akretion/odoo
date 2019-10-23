@@ -799,7 +799,7 @@ class ProcurementOrder(models.Model):
         if procurement.purchase_line_id:
             if not procurement.move_ids:
                 return False
-            return all(move.state == 'done' for move in procurement.move_ids)
+            return all(move.state in ('done', 'cancel') for move in procurement.move_ids) and any(move.state == 'done' for move in procurement.move_ids)
         return super(ProcurementOrder, self)._check(procurement)
 
     @api.v8
