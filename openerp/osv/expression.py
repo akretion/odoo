@@ -799,6 +799,14 @@ class expression(object):
             model = leaf.model
             field = model._fields.get(path[0])
             column = model._columns.get(path[0])
+            if field and hasattr(field, 'sparse') and field.sparse:
+                args = {}
+                for attr, prop in field.column_attrs:
+                    args[attr] = getattr(field, prop)
+                for attr, value in field._attrs.iteritems():
+                    args[attr] = value
+                column = getattr(fields, field.type)(**args)
+                column.store = True
             comodel = model.pool.get(getattr(field, 'comodel_name', None))
 
             # ----------------------------------------
@@ -1179,11 +1187,24 @@ class expression(object):
             joins |= set(leaf.get_join_conditions())
         self.joins = list(joins)
 
+    def sparse_to_column(self, model, field_name):
+        field = model._fields.get(field_name, None)
+        if field and hasattr(field, 'sparse') and field.sparse:
+            args = {}
+            for attr, prop in field.column_attrs:
+                args[attr] = getattr(field, prop)
+            for attr, value in field._attrs.iteritems():
+                args[attr] = value
+            column = getattr(fields, field.type)(**args)
+            column.store = True
+        else:
+            column = model._columns.get(field_name, None)
+        return column
+
     def __leaf_to_sql(self, eleaf):
         model = eleaf.model
         leaf = eleaf.leaf
         left, operator, right = leaf
-
         # final sanity checks - should never fail
         assert operator in (TERM_OPERATORS + ('inselect', 'not inselect')), \
             "Invalid operator %r in domain term %r" % (operator, leaf)
@@ -1193,7 +1214,7 @@ class expression(object):
             "Invalid value %r in domain term %r" % (right, leaf)
 
         table_alias = '"%s"' % (eleaf.generate_alias())
-
+        col = self.sparse_to_column(model, left)
         if leaf == TRUE_LEAF:
             query = 'TRUE'
             params = []
@@ -1233,7 +1254,7 @@ class expression(object):
                     if left == 'id':
                         instr = ','.join(['%s'] * len(params))
                     else:
-                        ss = model._columns[left]._symbol_set
+                        ss = col._symbol_set
                         instr = ','.join([ss[0]] * len(params))
                         params = map(ss[1], params)
                     query = '(%s."%s" %s (%s))' % (table_alias, left, operator, instr)
@@ -1250,7 +1271,7 @@ class expression(object):
             else:  # Must not happen
                 raise ValueError("Invalid domain term %r" % (leaf,))
 
-        elif (left in model._columns) and model._columns[left]._type == "boolean" and ((operator == '=' and right is False) or (operator == '!=' and right is True)):
+        elif (col) and col._type == "boolean" and ((operator == '=' and right is False) or (operator == '!=' and right is True)):
             query = '(%s."%s" IS NULL or %s."%s" = false )' % (table_alias, left, table_alias, left)
             params = []
 
@@ -1258,7 +1279,7 @@ class expression(object):
             query = '%s."%s" IS NULL ' % (table_alias, left)
             params = []
 
-        elif (left in model._columns) and model._columns[left]._type == "boolean" and ((operator == '!=' and right is False) or (operator == '==' and right is True)):
+        elif (col) and col._type == "boolean" and ((operator == '!=' and right is False) or (operator == '==' and right is True)):
             query = '(%s."%s" IS NOT NULL and %s."%s" != false)' % (table_alias, left, table_alias, left)
             params = []
 
@@ -1284,9 +1305,8 @@ class expression(object):
             need_wildcard = operator in ('like', 'ilike', 'not like', 'not ilike')
             sql_operator = {'=like': 'like', '=ilike': 'ilike'}.get(operator, operator)
             cast = '::text' if  sql_operator.endswith('like') else ''
-
-            if left in model._columns:
-                format = need_wildcard and '%s' or model._columns[left]._symbol_set[0]
+            if col:
+                format = need_wildcard and '%s' or col._symbol_set[0]
                 unaccent = self._unaccent if sql_operator.endswith('like') else lambda x: x
                 column = '%s.%s' % (table_alias, _quote(left))
                 query = '(%s %s %s)' % (unaccent(column + cast), sql_operator, unaccent(format))
@@ -1306,14 +1326,30 @@ class expression(object):
                     str_utf8 = str(right)
                 params = '%%%s%%' % str_utf8
                 add_null = not str_utf8
-            elif left in model._columns:
-                params = model._columns[left]._symbol_set[1](right)
+            elif col:
+                params = col._symbol_set[1](right)
 
             if add_null:
                 query = '(%s OR %s."%s" IS NULL)' % (query, table_alias, left)
 
         if isinstance(params, basestring):
             params = [params]
+        if hasattr(model._fields.get(left), 'sparse') and model._fields.get(left).sparse:
+            replaced_str = '%s."%s"' % (table_alias, left)
+            replacing_str = "%s.%s ->> '%s'" % (table_alias, model._fields[left].sparse, left)
+            if isinstance(right, bool):
+                replacing_str = "(%s.%s ->> '%s')::boolean" % (table_alias, model._fields[left].sparse, left)
+            if model._fields.get(left).type == 'float':
+                replacing_str = "(%s.%s ->> '%s')::numeric" % (table_alias, model._fields[left].sparse, left)
+            elif model._fields.get(left).type == 'integer':
+                replacing_str = "(%s.%s ->> '%s')::integer" % (table_alias, model._fields[left].sparse, left)
+            query = query.replace(replaced_str, replacing_str)
+#            if isinstance(params, list):
+#                params = ['%s' % p for p in params]
+#            # Case of float/integer value (at least)
+#            else:
+#                params = '%s' % params
+#            print query, params, 'kk', left, right
         return query, params
 
     def to_sql(self):
