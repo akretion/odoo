@@ -126,6 +126,9 @@ class sale_report(osv.osv):
         # sale will be updated before the overriding module would even
         # be loaded, it does not work. Solution would be to make a module
         # depending only on base... but it does not really make sense!
+
+        # TODO On migration, we should use Alexis's module bi_sale_company_currency
+        # and improve this module with the materialized view stuff.
         cr.execute("DROP MATERIALIZED VIEW IF EXISTS %s CASCADE" % (self._table,))
         cr.commit()
         cr.execute("""CREATE MATERIALIZED VIEW %s as (
