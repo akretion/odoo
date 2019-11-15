@@ -120,8 +120,15 @@ class sale_report(osv.osv):
 
     def init(self, cr):
         # self._table = sale_report
-        tools.drop_view_if_exists(cr, self._table)
-        cr.execute("""CREATE or REPLACE VIEW %s as (
+        # Patch in Odoo since there is no way to monkey patch the init method
+        # properly (or at least I did not find one). Since the module monkey
+        # patching have to depend on sale, and on sale update, the module
+        # sale will be updated before the overriding module would even
+        # be loaded, it does not work. Solution would be to make a module
+        # depending only on base... but it does not really make sense!
+        cr.execute("DROP MATERIALIZED VIEW IF EXISTS %s CASCADE" % (self._table,))
+        cr.commit()
+        cr.execute("""CREATE MATERIALIZED VIEW %s as (
             %s
             FROM ( %s )
             %s
