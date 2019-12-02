@@ -839,22 +839,22 @@ form: module.record_id""" % (xml_id,)
             raise_if_not_found=raise_if_not_found)
 
     def parse(self, de, mode=None):
-        if de.tag != 'openerp':
-            raise Exception("Mismatch xml format: root tag must be `openerp`.")
-
-        for n in de.findall('./data'):
-            for rec in n:
-                if rec.tag in self._tags:
-                    try:
-                        self._tags[rec.tag](self.cr, rec, n, mode=mode)
-                    except Exception, e:
-                        self.cr.rollback()
-                        exc_info = sys.exc_info()
-                        raise ParseError, (misc.ustr(e), etree.tostring(rec).rstrip(), rec.getroottree().docinfo.URL, rec.sourceline), exc_info[2]
+        roots = ['openerp','data','odoo']
+        if de.tag not in roots:
+            raise Exception("Root xml tag must be <openerp>, <odoo> or <data>.")
+        for rec in de:
+            if rec.tag in roots:
+                self.parse(rec, mode)
+            elif rec.tag in self._tags:
+                try:
+                    self._tags[rec.tag](self.cr, rec, de, mode=mode)
+                except Exception, e:
+                    self.cr.rollback()
+                    exc_info = sys.exc_info()
+                    raise ParseError, (misc.ustr(e), etree.tostring(rec).rstrip(), rec.getroottree().docinfo.URL, rec.sourceline), exc_info[2]
         return True
 
     def __init__(self, cr, module, idref, mode, report=None, noupdate=False):
-
         self.mode = mode
         self.module = module
         self.cr = cr
