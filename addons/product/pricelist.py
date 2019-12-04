@@ -235,16 +235,21 @@ class product_pricelist(osv.osv):
             prod_tmpl_ids = [product.product_tmpl_id.id for product in products]
 
         # Load all rules
-        cr.execute(
-            'SELECT i.id '
+
+        request = ('SELECT i.id '
             'FROM product_pricelist_item AS i '
             'WHERE (product_tmpl_id IS NULL OR product_tmpl_id = any(%s)) '
                 'AND (product_id IS NULL OR (product_id = any(%s))) '
                 'AND ((categ_id IS NULL) OR (categ_id = any(%s))) '
                 'AND (price_version_id = %s) '
-            'ORDER BY sequence, min_quantity desc',
-            (prod_tmpl_ids, prod_ids, categ_ids, version.id))
-        
+            'ORDER BY {}')
+
+        # TODO in next version we should be able to contribute this change
+        request = request.format(self.pool['product.pricelist.item']._order)
+
+        cr.execute(request, (prod_tmpl_ids, prod_ids, categ_ids, version.id))
+
+
         item_ids = [x[0] for x in cr.fetchall()]
         items = self.pool.get('product.pricelist.item').browse(cr, uid, item_ids, context=context)
 
@@ -477,7 +482,10 @@ class product_pricelist_item(osv.osv):
 
     _name = "product.pricelist.item"
     _description = "Pricelist item"
-    _order = "sequence, min_quantity desc"
+    # Note in version 10 and 12 sequence is not used anymore
+    # applied_on is automatically fill and used for applying the equivalent of sorting
+    # done here. So this hack will be not necessary anymore
+    _order = "pricelist_id, product_id asc, product_tmpl_id asc, categ_id asc, min_quantity desc"
     _defaults = {
         'base': _get_default_base,
         'min_quantity': lambda *a: 0,
