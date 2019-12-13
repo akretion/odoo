@@ -485,7 +485,7 @@ class product_pricelist_item(osv.osv):
     # Note in version 10 and 12 sequence is not used anymore
     # applied_on is automatically fill and used for applying the equivalent of sorting
     # done here. So this hack will be not necessary anymore
-    _order = "pricelist_id, product_id asc, product_tmpl_id asc, categ_id asc, min_quantity desc"
+    _order = "price_version_id, product_id asc, product_tmpl_id asc, categ_id asc, min_quantity desc"
     _defaults = {
         'base': _get_default_base,
         'min_quantity': lambda *a: 0,
