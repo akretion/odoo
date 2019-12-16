@@ -33,6 +33,7 @@ from openerp import SUPERUSER_ID, api
 import openerp.addons.decimal_precision as dp
 from openerp.addons.procurement import procurement
 import logging
+from itertools import groupby
 
 
 _logger = logging.getLogger(__name__)
@@ -2194,35 +2195,43 @@ class stock_move(osv.osv):
             }
         return values
 
-    @api.cr_uid_ids_context
-    def _picking_assign(self, cr, uid, move_ids, procurement_group, location_from, location_to, context=None):
+    @api.multi
+    def _key_assign_picking(self):
+        self.ensure_one()
+        return self.group_id, self.location_id, self.location_dest_id, self.picking_type_id
+
+    @api.multi
+    def _picking_assign(self, procurement_group, location_from, location_to):
         """Assign a picking on the given move_ids, which is a list of move supposed to share the same procurement_group, location_from and location_to
         (and company). Those attributes are also given as parameters.
         """
-        pick_obj = self.pool.get("stock.picking")
-        # Use a SQL query as doing with the ORM will split it in different queries with id IN (,,)
-        # In the next version, the locations on the picking should be stored again.
-        query = """
-            SELECT stock_picking.id FROM stock_picking, stock_move
-            WHERE
-                stock_picking.state in ('draft', 'confirmed', 'waiting', 'partially_available', 'assigned') AND
-                stock_move.picking_id = stock_picking.id AND
-                stock_move.location_id = %s AND
-                stock_move.location_dest_id = %s AND
-        """
-        params = (location_from, location_to)
-        if not procurement_group:
-            query += "stock_picking.group_id IS NULL LIMIT 1"
-        else:
-            query += "stock_picking.group_id = %s LIMIT 1"
-            params += (procurement_group,)
-        cr.execute(query, params)
-        [pick] = cr.fetchone() or [None]
-        if not pick:
-            move = self.browse(cr, uid, move_ids, context=context)[0]
-            values = self._prepare_picking_assign(cr, uid, move, context=context)
-            pick = pick_obj.create(cr, uid, values, context=context)
-        return self.write(cr, uid, move_ids, {'picking_id': pick}, context=context)
+        pick_obj = self.env["stock.picking"]
+        grouped_moves = groupby(sorted(self, key=lambda m: [f.id for f in m._key_assign_picking()]), key=lambda m: [m._key_assign_picking()])
+        for group, moves in grouped_moves:
+            moves = self.env['stock.move'].concat(*list(moves))
+            query = """
+                SELECT stock_picking.id FROM stock_picking, stock_move
+                WHERE
+                    stock_picking.state in ('draft', 'confirmed', 'waiting', 'partially_available', 'assigned') AND
+                    stock_move.picking_id = stock_picking.id AND
+                    stock_move.location_id = %s AND
+                    stock_move.location_dest_id = %s AND
+                    stock_picking.picking_type_id = %s AND
+            """
+            move = moves[0]
+            params = (location_from, location_to, move.picking_type_id.id)
+            if not procurement_group:
+                query += "stock_picking.group_id IS NULL LIMIT 1"
+            else:
+                query += "stock_picking.group_id = %s LIMIT 1"
+                params += (procurement_group,)
+            self.env.cr.execute(query, params)
+            [pick] = self.env.cr.fetchone() or [None]
+            if not pick:
+                values = self._prepare_picking_assign(move)
+                pick = pick_obj.create(values).id
+            moves.write({'picking_id': pick})
+        return True
 
     def onchange_date(self, cr, uid, ids, date, date_expected, context=None):
         """ On change of Scheduled Date gives a Move date.
