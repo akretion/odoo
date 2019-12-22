@@ -46,7 +46,10 @@ class AccountTaxPython(models.Model):
         for tax in self.filtered(lambda r: r.amount_type == 'code'):
             localdict = self._context.get('tax_computation_context', {})
             localdict.update({'price_unit': price_unit, 'quantity': quantity, 'product': product, 'partner': partner, 'company': company})
-            safe_eval(tax.python_applicable, localdict, mode="exec", nocopy=True)
+            try:
+                safe_eval(tax.python_applicable, localdict, mode="exec", nocopy=True)
+            except:
+                pass
             if localdict.get('result', False):
                 taxes += tax
         return super(AccountTaxPython, taxes).compute_all(price_unit, currency, quantity, product, partner)
