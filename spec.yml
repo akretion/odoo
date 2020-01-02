@@ -1,0 +1,13 @@
+odoo:
+    modules: []
+    remotes:
+        oca: https://github.com/oca/odoo
+        ak: https://github.com/akretion/odoo
+    merges:
+        - oca af5f5c3a7aabae42800ca1755c8a17091505722e
+        - ak 9.0-hooks
+        - ak 9-custom-sd-rebased
+        - ak 9-refactore-sparse-field-search
+        - ak 9-sparse-field-jsonb-compat
+    fetch_all:
+        - oca

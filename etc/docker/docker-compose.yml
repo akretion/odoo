@@ -1,0 +1,9 @@
+version: '2'
+
+services:
+  src:
+    working_dir: /odoo
+    image: 721728311103.dkr.ecr.eu-west-1.amazonaws.com/oliverstore/odoo-src-builder:latest
+    volumes:
+      - ../../:/odoo
+    entrypoint: ak build -c /odoo/spec.yaml
