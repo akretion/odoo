@@ -1732,7 +1732,7 @@ class serialized(_column):
     # We use postgresql jsonb field and recent version of psycopg already
     # manage it.
     def _symbol_set_struct(val):
-        return val
+        return json.dumps(val)
 
     def _symbol_get_struct(self, val):
         return val or {}
