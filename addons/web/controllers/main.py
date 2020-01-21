@@ -776,6 +776,12 @@ class Session(http.Controller):
 
     def session_info(self):
         request.session.ensure_valid()
+        # CUSTOM oskab to remove in v12
+        warehouse_id = None
+        if request.session.uid and "warehouse_id" in request.env.user._fields:
+            warehouse = request.env.user.warehouse_id
+            if warehouse:
+                warehouse_id = warehouse.id
         return {
             "session_id": request.session_id,
             "uid": request.session.uid,
@@ -783,7 +789,7 @@ class Session(http.Controller):
             "db": request.session.db,
             "username": request.session.login,
             "company_id": request.env.user.company_id.id if request.session.uid else None,
-            "warehouse_id": request.env.user.warehouse_id.id if request.session.uid else None, #CUSTOM oskab to remove in v12
+            "warehouse_id": warehouse_id,  # CUSTOM oskab to remove in v12
         }
 
     @http.route('/web/session/get_session_info', type='json', auth="none")
