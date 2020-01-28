@@ -295,7 +295,10 @@ class account_move_line(osv.osv):
             else:
                 part = False
             if account and part:
-                account = fiscal_pos_obj.map_account(cr, uid, part and part.property_account_position or False, account.id)
+                ###### CUSTOM OSKAB ######
+                # ADD missing context
+                account = fiscal_pos_obj.map_account(cr, uid, part and part.property_account_position or False, account.id, context)
+                ###### END CUSTOM OSKAB #####
                 account = account_obj.browse(cr, uid, account, context=context)
             data['account_id'] =  account and account.id or False
             #compute the amount in secondary currency of the account, if needed
@@ -749,14 +752,17 @@ class account_move_line(osv.osv):
             id2 =  part.property_account_receivable.id
             if jt:
                 if jt in ('sale', 'purchase_refund'):
-                    val['account_id'] = fiscal_pos_obj.map_account(cr, uid, part and part.property_account_position or False, id2)
+                ###### CUSTOM OSKAB #####
+                # ADD missing context
+                    val['account_id'] = fiscal_pos_obj.map_account(cr, uid, part and part.property_account_position or False, id2, context=context)
                 elif jt in ('purchase', 'sale_refund'):
-                    val['account_id'] = fiscal_pos_obj.map_account(cr, uid, part and part.property_account_position or False, id1)
+                    val['account_id'] = fiscal_pos_obj.map_account(cr, uid, part and part.property_account_position or False, id1, context=context)
                 elif jt in ('general', 'bank', 'cash'):
                     if part.customer:
-                        val['account_id'] = fiscal_pos_obj.map_account(cr, uid, part and part.property_account_position or False, id2)
+                        val['account_id'] = fiscal_pos_obj.map_account(cr, uid, part and part.property_account_position or False, id2, context=context)
                     elif part.supplier:
-                        val['account_id'] = fiscal_pos_obj.map_account(cr, uid, part and part.property_account_position or False, id1)
+                        val['account_id'] = fiscal_pos_obj.map_account(cr, uid, part and part.property_account_position or False, id1, context=context)
+                ###### ENC CUSTOM OSKAB ######
                 if val.get('account_id', False):
                     d = self.onchange_account_id(cr, uid, ids, account_id=val['account_id'], partner_id=part.id, context=context)
                     val.update(d['value'])

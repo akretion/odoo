@@ -1018,7 +1018,10 @@ class sale_order_line(osv.osv):
                 pu = round(line.price_unit * line.product_uom_qty / uosqty,
                         self.pool.get('decimal.precision').precision_get(cr, uid, 'Product Price'))
             fpos = line.order_id.fiscal_position or False
-            account_id = self.pool.get('account.fiscal.position').map_account(cr, uid, fpos, account_id)
+            ##### CUSTOM OSKAB ######
+            # Add missing context #
+            account_id = self.pool.get('account.fiscal.position').map_account(cr, uid, fpos, account_id, context=context)
+            ##### END CUSTOM OSKAB ######
             if not account_id:
                 raise osv.except_osv(_('Error!'),
                             _('There is no Fiscal Position defined or Income category account defined for default properties of Product categories.'))
