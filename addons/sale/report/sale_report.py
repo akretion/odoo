@@ -139,6 +139,11 @@ class sale_report(osv.osv):
         # We need a unique index to be able to refresh view concurrently
         # which is important else we could have huge dead lock in database during
         # refresh
+        # Also add some indexes
         cr.execute("create unique index on sale_report (id)")
+        cr.execute("CREATE INDEX sale_report_date_index ON sale_report (date)")
+        cr.execute("CREATE INDEX sale_report_state_index ON sale_report (state)")
+        cr.execute("CREATE INDEX sale_report_user_id_index ON sale_report (user_id)")
+        cr.execute("CREATE INDEX sale_report_section_id_index ON sale_report (section_id)")
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
