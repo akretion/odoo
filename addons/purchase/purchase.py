@@ -610,7 +610,10 @@ class purchase_order(osv.osv):
         else:
             acc_id = property_obj.get(cr, uid, 'property_account_expense_categ', 'product.category', context=context).id
         fpos = po_line.order_id.fiscal_position or False
-        return fiscal_obj.map_account(cr, uid, fpos, acc_id)
+        ### CUSTOM_OSKAB ####
+        # ADD missing context #
+        return fiscal_obj.map_account(cr, uid, fpos, acc_id, context=context)
+        ### END CUSTOM OSKAB ####
 
     def _prepare_inv_line(self, cr, uid, account_id, order_line, context=None):
         """Collects require data from purchase order line that is used to create invoice line
