@@ -151,7 +151,10 @@ class stock_move(osv.osv):
             fiscal_position = fp_obj.browse(cr, uid, context['fp_id']) if context['fp_id'] else False
         else:
             fiscal_position = partner.property_account_position
-        account_id = fp_obj.map_account(cr, uid, fiscal_position, account_id)
+        ##### CUSTOM OSKAB ###
+        # Add missing context
+        account_id = fp_obj.map_account(cr, uid, fiscal_position, account_id, context=context)
+        #### END CUSTOM OSKAB ###
 
         # set UoS if it's a sale and the picking doesn't have one
         uos_id = move.product_uom.id
