@@ -2943,17 +2943,34 @@ class stock_inventory_line(osv.osv):
         'product_uom_id': lambda self, cr, uid, ctx=None: self.pool['ir.model.data'].get_object_reference(cr, uid, 'product', 'product_uom_unit')[1]
     }
 
-    def create(self, cr, uid, values, context=None):
-        product_obj = self.pool.get('product.product')
-        dom = [('product_id', '=', values.get('product_id')), ('inventory_id.state', '=', 'confirm'),
-               ('location_id', '=', values.get('location_id')), ('partner_id', '=', values.get('partner_id')),
-               ('package_id', '=', values.get('package_id')), ('prod_lot_id', '=', values.get('prod_lot_id'))]
-        res = self.search(cr, uid, dom, context=context)
-        if res:
-            location = self.pool['stock.location'].browse(cr, uid, values.get('location_id'), context=context)
-            product = product_obj.browse(cr, uid, values.get('product_id'), context=context)
-            raise Warning(_("You cannot have two inventory adjustements in state 'in Progess' with the same product(%s), same location(%s), same package, same owner and same lot. Please first validate the first inventory adjustement with this product before creating another one.") % (product.name, location.name))
-        return super(stock_inventory_line, self).create(cr, uid, values, context=context)
+    @api.model
+    def create(self, values):
+        res = super(stock_inventory_line, self).create(values)
+        res._check_no_duplicate_line()
+        return res
+
+    @api.multi
+    def write(self, vals):
+        res = super(stock_inventory_line, self).write(vals)
+        self._check_no_duplicate_line()
+        return res
+
+    @api.multi
+    def _check_no_duplicate_line(self):
+        for line in self:
+            existings = self.search([
+                ('id', '!=', self.id),
+                ('product_id', '=', self.product_id.id),
+                ('inventory_id.state', '=', 'confirm'),
+                ('location_id', '=', self.location_id.id),
+                ('partner_id', '=', self.partner_id.id),
+                ('package_id', '=', self.package_id.id),
+                ('prod_lot_id', '=', self.prod_lot_id.id)])
+            if existings:
+                raise Warning(
+                    _("You cannot have two inventory adjustments in state 'In Progress' with the same product,"
+                      " same location, same package, same owner and same lot. Please first validate"
+                      " the first inventory adjustment before creating another one."))
 
     def _get_quants(self, cr, uid, line, context=None):
         quant_obj = self.pool["stock.quant"]
