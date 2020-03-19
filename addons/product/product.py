@@ -416,6 +416,11 @@ class product_attribute_value(osv.osv):
             raise osv.except_osv(_('Integrity Error!'), _('The operation cannot be completed:\nYou trying to delete an attribute value with a reference on a product variant.'))
         return super(product_attribute_value, self).unlink(cr, uid, ids, context=context)
 
+    @api.multi
+    def _variant_name(self, variable_attributes):
+        return ", ".join([v.name for v in self if v.attribute_id in variable_attributes])
+
+
 class product_attribute_price(osv.osv):
     _name = "product.attribute.price"
     _columns = {
@@ -1097,7 +1102,8 @@ class product_product(osv.osv):
 
         result = []
         for product in self.browse(cr, SUPERUSER_ID, ids, context=context):
-            variant = ", ".join([v.name for v in product.attribute_value_ids])
+            variable_attributes = product.attribute_line_ids.filtered(lambda l: len(l.value_ids) > 1).mapped('attribute_id')
+            variant = product.attribute_value_ids._variant_name(variable_attributes)
             name = variant and "%s (%s)" % (product.name, variant) or product.name
             sellers = []
             if partner_ids:
