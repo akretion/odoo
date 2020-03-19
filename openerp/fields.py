@@ -73,6 +73,10 @@ def copy_cache(records, env):
                     value = value.with_env(env)
                 target._cache[name] = value
 
+def first(records):
+    """ Return the first record in ``records``, with the same prefetching. """
+    return next(iter(records)) if len(records) > 1 else records
+
 
 def resolve_all_mro(cls, name, reverse=False):
     """ Return the (successively overridden) values of attribute ``name`` in ``cls``
