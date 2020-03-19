@@ -2171,6 +2171,13 @@ class account_tax(osv.osv):
             return self._unit_compute_inv(cr, uid, incl_tax, price)[0]['price_unit']
         return price
 
+    def _fix_tax_included_price_company(self, cr, uid, price, prod_taxes, line_taxes, company_id):
+        if company_id:
+            #To keep the same behavior as in _compute_tax_id
+            prod_taxes = prod_taxes.filtered(lambda tax: tax.company_id == company_id)
+            line_taxes = line_taxes.filtered(lambda tax: tax.company_id == company_id)
+        return self._fix_tax_included_price(cr, uid, price, prod_taxes, line_taxes.ids)
+
     def _unit_compute_inv(self, cr, uid, taxes, price_unit, product=None, partner=None):
         taxes = self._applicable(cr, uid, taxes, price_unit,  product, partner)
         res = []
