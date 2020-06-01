@@ -151,6 +151,7 @@ class TransactionCase(BaseCase):
             # rollback and close the cursor, and reset the environments
             self.env.reset()
             self.cr.rollback()
+            self.registry.clear_caches()
             self.cr.close()
 
     def patch_order(self, model, order):
@@ -184,6 +185,7 @@ class SingleTransactionCase(BaseCase):
         # rollback and close the cursor, and reset the environments
         cls.env.reset()
         cls.cr.rollback()
+        cls.registry.clear_caches()
         cls.cr.close()
 
 
