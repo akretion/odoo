@@ -307,8 +307,8 @@ class product_pricelist(osv.osv):
                                 price_tmp, round=False,
                                 context=context)
                 elif rule.base == -2:
-                    seller = self.pool['product.product']._get_seller(cr, uid,
-                        product, qty=qty, partner_id=partner, context=context)
+                    partner_rec = self.pool['res.partner'].browse(cr, uid, partner, context=context)
+                    seller = product._select_seller(partner_id=partner_rec, quantity=qty)
                     if seller:
                         qty_in_seller_uom = qty
                         seller_uom = seller.product_uom.id

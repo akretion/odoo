@@ -26,6 +26,7 @@ from _common import ceiling
 
 
 from openerp import api, tools, SUPERUSER_ID
+from openerp import fields as new_fields
 from openerp.osv import osv, fields, expression
 from openerp.tools.translate import _
 from openerp.tools import DEFAULT_SERVER_DATETIME_FORMAT
@@ -862,21 +863,25 @@ class product_product(osv.osv):
     _inherit = ['mail.thread']
     _order = 'default_code,name_template'
 
+    # simplified backport from v13/14
+    @api.multi
+    def _prepare_sellers(self, params=False):
+        return self.env['product.supplierinfo'].search(
+            [('product_tmpl_id', '=', self.product_tmpl_id.id)])
 
-    # Custom oskab to remove in v10 since it will be native
-    def _get_seller(self, cr, uid, product, qty=0.0, partner_id=False, context=None):
-        if context is None: 
-            context = {}
-        date = context.get('date', fields.date.context_today(self, cr, uid, context=context))
-        res = False
-        if partner_id:
-            partner = self.pool['res.partner'].browse(cr, uid, partner_id, context=context)
-        for seller in product.seller_ids:
+    @api.multi
+    def _select_seller(self, partner_id=False, quantity=0.0, date=None, uom_id=False, params=False):
+        self.ensure_one()
+        if date is None:
+            date = self.env.context.get('date') or new_fields.Date.context_today(self)
+        res = self.env['product.supplierinfo']
+        sellers = self._prepare_sellers(params=params)
+        for seller in sellers:
             if seller.date_start and seller.date_start > date:
                 continue
             if seller.date_end and seller.date_end < date:
                 continue
-            if partner_id and seller.name not in [partner, partner.parent_id]:
+            if partner_id and seller.name not in [partner_id, partner_id.parent_id]:
                 continue
 
             res = seller
