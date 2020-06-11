@@ -2066,17 +2066,7 @@ class stock_move(osv.osv):
                     #Note that, for pulled moves we intentionally don't propagate on the procurement.
                     if propagated_changes_dict:
                         self.write(cr, uid, [move.move_dest_id.id], propagated_changes_dict, context=context)
-        track_pickings = not context.get('mail_notrack') and any(field in vals for field in ['state', 'picking_id', 'partially_available'])
-        if track_pickings:
-            to_track_picking_ids = set([move.picking_id.id for move in moves if move.picking_id])
-            if vals.get('picking_id'):
-                to_track_picking_ids.add(vals['picking_id'])
-            to_track_picking_ids = list(to_track_picking_ids)
-            pickings = picking_obj.browse(cr, uid, to_track_picking_ids, context=context)
-            initial_values = dict((picking.id, {'state': picking.state}) for picking in pickings)
         res = super(stock_move, self).write(cr, uid, ids, vals, context=context)
-        if track_pickings:
-            picking_obj.message_track(cr, uid, to_track_picking_ids, picking_obj.fields_get(cr, uid, ['state'], context=context), initial_values, context=context)
         return res
 
     def onchange_quantity(self, cr, uid, ids, product_id, product_qty, product_uom, product_uos):
