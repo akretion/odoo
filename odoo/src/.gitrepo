@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/git-commands/git-subrepo#readme
+;
+[subrepo]
+	remote = https://github.com/odoo/odoo.git
+	branch = 12.0
+	commit = 397e90419f2b06e938b5ba204333f89e80146286
+	parent = cb2ee8a6e4be15ed32b0f5a051cedfb9f6be6820
+	method = merge
+	cmdver = 0.4.1
