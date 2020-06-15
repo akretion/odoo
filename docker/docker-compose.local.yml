@@ -1,0 +1,37 @@
+version: '3.6'
+
+services:
+  odoo:
+    environment:
+    - LOCAL_USER_ID=${UID}
+    volumes:
+    - entrypoint:/start-entrypoint.d
+    - external-src:/odoo/external-src
+    - local-src:/odoo/local-src
+    - script:/odoo/script
+
+volumes:
+  entrypoint:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${APP_DIR}/odoo/entrypoint
+      o: bind
+  external-src:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${APP_DIR}/odoo/external-src
+      o: bind
+  local-src:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${APP_DIR}/odoo/local-src
+      o: bind
+  script:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${APP_DIR}/odoo/script
+      o: bind

@@ -1,0 +1,53 @@
+version: '3.6'
+
+networks:
+  private:
+    external: true
+    name: ${DOCKER_NETWORK_PRIVATE}
+
+services:
+  odoo:
+    tty: true
+    stdin_open: true
+    build:
+      args:
+      - DOCKER_BUILD_DIR=docker/odoo
+      - TARGET=${DOCKER_BUILD_TARGET}
+      context: ..
+      dockerfile: docker/odoo/Dockerfile
+      target: ${DOCKER_BUILD_TARGET}
+    environment:
+    - ADDITIONAL_ODOO_RC=${ODOO_ADDITIONAL_ODOO_RC}
+    - ADDONS_PATH=${ODOO_ADDONS_PATH}
+    - ADMIN_PASSWD=${ODOO_ADMIN_PASSWD}
+    - DB_HOST=${ODOO_DB_HOST}
+    - DB_NAME=${ODOO_DB_NAME}
+    - DB_PASSWORD=${ODOO_DB_PASS}
+    - DB_USER=${ODOO_DB_USER}
+    - ELASTIC_APM_SERVER_URL=${ODOO_ELASTIC_APM_SERVER_URL}
+    - ELASTIC_APM_VERIFY_SERVER_CERT=${ODOO_ELASTIC_APM_VERIFY_SERVER_CERT}
+    - LOG_HANDLER=${ODOO_LOG_HANDLER}
+    - LOG_DB=${ODOO_LOG_DB}
+    - LOGFILE=${ODOO_LOGFILE}
+    - LOG_LEVEL=${ODOO_LOG_LEVEL}
+    - MARABUNTA_ALLOW_SERIE=${ODOO_MARABUNTA_ALLOW_SERIE}
+    - MARABUNTA_FORCE_VERSION=${ODOO_MARABUNTA_FORCE_VERSION}
+    - MAX_CRON_THREADS=${ODOO_MAX_CRON_THREADS}
+    - ODOO_BASE_URL=${ODOO_BASE_URL}
+    - ODOO_QUEUE_JOB_CHANNELS=${ODOO_QUEUE_JOB_CHANNELS}
+    - ODOO_REPORT_URL=${ODOO_REPORT_URL}
+    - RUNNING_ENV=${ODOO_RUNNING_ENV}
+    - UNACCENT=${ODOO_UNACCENT}
+    - WORKERS=${ODOO_WORKERS}
+
+    networks:
+      private:
+    ports:
+    - 8069
+    volumes:
+    - odoo:/data/odoo
+    - odoo-cache:/odoo/.cache
+
+volumes:
+  odoo:
+  odoo-cache:

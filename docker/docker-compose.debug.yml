@@ -1,0 +1,6 @@
+version: '3.6'
+
+services:
+  odoo:
+    ports:
+    - 8888:8888

@@ -1,0 +1,11 @@
+version: '3.6'
+
+services:
+  odoo:
+    environment:
+    - LIMIT_MEMORY_HARD=2684354560
+    - LIMIT_MEMORY_SOFT=2147483648
+    - LIMIT_REQUEST=98192
+    - LIMIT_TIME_CPU=91800
+    - LIMIT_TIME_REAL=93600
+    restart: always

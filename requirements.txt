@@ -1,0 +1,4 @@
+# local project
+# odoo/src#egg=odoo
+# local project
+# -e .

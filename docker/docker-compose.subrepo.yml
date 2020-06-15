@@ -1,0 +1,16 @@
+version: '3.6'
+
+networks:
+  public:
+    external: true
+    name: ${DOCKER_NETWORK_PUBLIC}
+
+services:
+  odoo:
+    labels:
+    - SERVICE_8069_NAME=${COMPOSE_SERVICE_NAME}-odoo-8069
+    - SERVICE_8069_CHECK_TCP=true
+    - SERVICE_8069_CHECK_INITITAL_STATUS=passing
+    - SERVICE_8069_TAGS=${ODOO_SERVICE_8069_TAGS}
+    networks:
+      public:
