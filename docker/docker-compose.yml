@@ -6,7 +6,7 @@ networks:
     name: ${DOCKER_NETWORK_PRIVATE}
 
 services:
-  odoo:
+  odoo12:
     tty: true
     stdin_open: true
     build:

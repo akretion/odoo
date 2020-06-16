@@ -1,7 +1,7 @@
 version: '3.6'
 
 services:
-  odoo:
+  odoo12:
     ports:
     - 8069:8069
     - 8072:8072

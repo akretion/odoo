@@ -1,7 +1,7 @@
 version: '3.6'
 
 services:
-  odoo:
+  odoo12:
     environment:
     - LIMIT_MEMORY_HARD=2684354560
     - LIMIT_MEMORY_SOFT=2147483648

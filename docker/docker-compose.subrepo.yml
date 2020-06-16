@@ -6,7 +6,7 @@ networks:
     name: ${DOCKER_NETWORK_PUBLIC}
 
 services:
-  odoo:
+  odoo12:
     labels:
     - SERVICE_8069_NAME=${COMPOSE_SERVICE_NAME}-odoo-8069
     - SERVICE_8069_CHECK_TCP=true

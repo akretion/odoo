@@ -4,6 +4,7 @@ ARG DOCKER_BUILD_DIR
 
 COPY /odoo/src /odoo/src
 COPY /odoo/addons /odoo/odoo/addons
+COPY /odoo/migration.yml /odoo/
 
 COPY /requirements.txt /odoo/
 COPY /setup.py /odoo/
@@ -31,15 +32,16 @@ RUN pip install -r requirements.txt
 
 FROM dist as local
 
-COPY /odoo/src /odoo/src
-COPY /odoo/setup.py /odoo/
-COPY /odoo/VERSION /odoo/
-COPY /odoo/bin/odoo /odoo-bin-compat/odoo
+# COPY /odoo/src /odoo/src
+# COPY /odoo/setup.py /odoo/
+# COPY /odoo/VERSION /odoo/
+# COPY /odoo/bin/odoo /odoo-bin-compat/odoo
 
-RUN pip install -e /odoo
-RUN pip install -e /odoo/src
+# RUN pip install -e /odoo
+# RUN pip install -e /odoo/src
 
-COPY /odoo/migration.yml /odoo/
+# COPY /odoo/migration.yml /odoo/
+RUN pip install ptvsd
 
 FROM local as debug
 
