@@ -1,0 +1,4 @@
+#!/bin/bash
+echo "pwd"
+echo `pwd`
+pip install -r ../../ext_requirements.txt

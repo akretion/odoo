@@ -2,14 +2,6 @@ FROM camptocamp/odoo-project:12.0-latest as dist
 MAINTAINER 1001Pharmacies <technique+docker@1001pharmacies.com>
 ARG DOCKER_BUILD_DIR
 
-COPY /odoo/src /odoo/src
-COPY /odoo/addons /odoo/odoo/addons
-COPY /odoo/migration.yml /odoo/
-
-COPY /requirements.txt /odoo/
-COPY /setup.py /odoo/
-COPY /phs.cfg /odoo/
-
 # RUN apt-get update \
 #  && apt-get -fy upgrade \
 #  && apt-get -fy remove libpq5 \
@@ -27,21 +19,20 @@ COPY /phs.cfg /odoo/
 
 WORKDIR /odoo
 
-RUN pip install -r requirements.txt
-
-
 FROM dist as local
 
-# COPY /odoo/src /odoo/src
-# COPY /odoo/setup.py /odoo/
-# COPY /odoo/VERSION /odoo/
-# COPY /odoo/bin/odoo /odoo-bin-compat/odoo
+COPY /odoo/addons /odoo/odoo/addons
+COPY /odoo/entrypoint/ /start-entrypoint.d/
+COPY /odoo/local-src /odoo/local-src
+COPY /odoo/migration.yml /odoo/
+COPY /odoo/src /odoo/src
+COPY /phs.cfg /odoo/
+COPY /requirements.txt /odoo/
+COPY /ext_requirements.txt /odoo/
+COPY /setup.py /odoo/
 
-# RUN pip install -e /odoo
-# RUN pip install -e /odoo/src
-
-# COPY /odoo/migration.yml /odoo/
-RUN pip install ptvsd
+RUN chown -R 999:1000 /odoo
+# RUN pip install -r ext_requirements.txt
 
 FROM local as debug
 
@@ -58,12 +49,6 @@ ARG VERSION
 LABEL com.1001pharmacies.branch=${BRANCH}
 LABEL com.1001pharmacies.target=${TARGET}
 LABEL com.1001pharmacies.version=${VERSION}
-
-COPY /odoo/entrypoint/ /start-entrypoint.d/
-COPY /odoo/external-src/ /odoo/external-src/
-COPY /odoo/local-src/ /odoo/local-src/
-COPY /odoo/script/ /odoo/script/
-RUN chown -R 999:1000 /odoo
 
 FROM tests as preprod
 FROM preprod as prod
