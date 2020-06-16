@@ -47,9 +47,9 @@ FROM local as debug
 
 RUN pip install ptvsd
 
-EXPOSE 8888
+EXPOSE 9999
 
-CMD ["gosu", "odoo", "python", "-m", "ptvsd", "--host", "0.0.0.0", "--port", "8888", "--multiprocess", "/odoo/src/odoo.py", "-c", "/etc/odoo.cfg"],
+CMD ["gosu", "odoo", "python3", "-m", "ptvsd", "--host", "0.0.0.0", "--port", "9999", "--multiprocess", "/odoo/src/odoo-bin", "-c", "/etc/odoo.cfg"],
 
 FROM local as tests
 ARG BRANCH
