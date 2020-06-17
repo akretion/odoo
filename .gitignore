@@ -36,41 +36,9 @@ htmlcov/
 nosetests.xml
 coverage.xml
 
-# Translations
-*.mo
-
 # Pycharm
 .idea
 
 # vscode
 .vscode
 
-# Mr Developer
-.mr.developer.cfg
-.project
-.pydevproject
-
-# Rope
-.ropeproject
-
-# Sphinx documentation
-docs/_build/
-
-# Backup files
-*~
-*.swp
-
-# Gitlab
-!.gitlab
-
-migration_scripts/jma_config_migration.sh
-migration_scripts/mmi_config_migration.sh
-odoo.cfg
-odoo.log
-volume/
-
-# Odoo Source files
-src/
-
-# Tempory files
-tmp/
