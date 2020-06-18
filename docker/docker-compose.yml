@@ -43,7 +43,7 @@ services:
     networks:
       private:
     ports:
-    - 8069
+    - 8069:8069
     volumes:
     - odoo:/data/odoo
     - odoo-cache:/odoo/.cache
