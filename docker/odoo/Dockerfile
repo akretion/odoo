@@ -21,22 +21,30 @@ WORKDIR /odoo
 
 FROM dist as local
 
-COPY /odoo/addons /odoo/odoo/addons
-COPY /odoo/entrypoint/ /start-entrypoint.d/
-COPY /odoo/local-src /odoo/local-src
-COPY /odoo/migration.yml /odoo/
+# odoo base requirement + some others from camp2camp
+COPY /base_requirements.txt /odoo/
+RUN pip install -r base_requirements.txt
+
+# install odoo + custom addons 
 COPY /odoo/src /odoo/src
+COPY /odoo/entrypoint/ /start-entrypoint.d/
 COPY /phs.cfg /odoo/
-COPY /requirements.txt /odoo/
-COPY /ext_requirements.txt /odoo/
 COPY /setup.py /odoo/
+COPY /odoo/local-src /odoo/local-src
+COPY /odoo/addons /odoo/odoo/addons
+COPY /requirements.txt /odoo/
+COPY /odoo/migration.yml /odoo/
+RUN pip install -r requirements.txt
+
+# install external addons from OCA
+COPY /ext_requirements.txt /odoo/
+RUN pip install -r ext_requirements.txt
 
 RUN chown -R 999:1000 /odoo
-# RUN pip install -r ext_requirements.txt
 
 FROM local as debug
 
-RUN pip install ptvsd
+RUN pip install -r dev_requirements.txt
 
 EXPOSE 9999
 
