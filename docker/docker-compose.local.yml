@@ -5,33 +5,26 @@ services:
     environment:
     - LOCAL_USER_ID=${UID}
     volumes:
-    # - entrypoint:/start-entrypoint.d
-    # - external-src:/odoo/external-src
+    - entrypoint:/start-entrypoint.d
     - local-src:/odoo/local-src
-    # - script:/odoo/script
+    - script:/odoo/script
 
 volumes:
-  # entrypoint:
-  #   driver: local
-  #   driver_opts:
-  #     type: none
-  #     device: ${APP_DIR}/odoo/entrypoint
-  #     o: bind
-  # external-src:
-  #   driver: local
-  #   driver_opts:
-  #     type: none
-  #     device: ${APP_DIR}/odoo/external-src
-  #     o: bind
+  entrypoint:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${APP_DIR}/odoo/entrypoint
+      o: bind
   local-src:
     driver: local
     driver_opts:
       type: none
-      device: ${APP_DIR}/odoo/addons
+      device: ${APP_DIR}/odoo/local-src
       o: bind
-  # script:
-  #   driver: local
-  #   driver_opts:
-  #     type: none
-  #     device: ${APP_DIR}/odoo/script
-  #     o: bind
+  script:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${APP_DIR}/odoo/script
+      o: bind

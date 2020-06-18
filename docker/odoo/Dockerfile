@@ -25,26 +25,27 @@ FROM dist as local
 COPY /base_requirements.txt /odoo/
 RUN pip install -r base_requirements.txt
 
-# install odoo + custom addons 
+# install odoo
 COPY /odoo/src /odoo/src
 COPY /odoo/entrypoint/ /start-entrypoint.d/
-COPY /phs.cfg /odoo/
-COPY /setup.py /odoo/
-COPY /odoo/local-src /odoo/local-src
-COPY /odoo/addons /odoo/odoo/addons
-COPY /requirements.txt /odoo/
-COPY /odoo/migration.yml /odoo/
-RUN pip install -r requirements.txt
+RUN pip install ./src #egg=odoo
 
 # install external addons from OCA
 COPY /ext_requirements.txt /odoo/
 RUN pip install -r ext_requirements.txt
+
+COPY /odoo/migration.yml /odoo/
+COPY /odoo/phs.cfg /odoo/
+COPY /odoo/setup.py /odoo/
+# add symlink to local-src used by odoo setup tools
+COPY /odoo/odoo /odoo/odoo
 
 RUN chown -R 999:1000 /odoo
 
 FROM local as debug
 
 RUN pip install -r dev_requirements.txt
+
 
 EXPOSE 9999
 
@@ -57,6 +58,9 @@ ARG VERSION
 LABEL com.1001pharmacies.branch=${BRANCH}
 LABEL com.1001pharmacies.target=${TARGET}
 LABEL com.1001pharmacies.version=${VERSION}
+
+COPY /odoo/local-src /odoo/local-src
+RUN pip install -e .
 
 FROM tests as preprod
 FROM preprod as prod
