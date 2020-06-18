@@ -12,7 +12,7 @@ install: install-infra install-pgsql-database-odoo bootstrap ## Install applicat
 .PHONY: debug
 debug: DOCKER_BUILD_TARGET := debug
 debug: MOUNT_DEBUG := true
-debug: build up ## Launch application in debug mode
+debug: build up;## Launch application in debug mode
 
 .PHONY: upgrade
 upgrade: MODULES ?= all

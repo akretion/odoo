@@ -44,6 +44,7 @@ RUN chown -R 999:1000 /odoo
 
 FROM local as debug
 
+COPY /dev_requirements.txt /odoo/
 RUN pip install -r dev_requirements.txt
 
 
