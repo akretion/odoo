@@ -1,13 +1,9 @@
 ##
 # BUILD
 
-.PHONY: build
-build: ## Build application docker images
-ifneq (,$(filter $(ENV),$(ENV_DEPLOY)))
-	$(call make,build-$(ENV))
-else
-	$(call make,docker-compose-build)
-endif
+.PHONY: build@%
+build@%: ## Build deployment application docker images
+	$(call make,build-app)
 
 .PHONY: build-env
 build-env: SERVICE ?= $(DOCKER_SERVICE)
