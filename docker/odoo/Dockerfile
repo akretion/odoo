@@ -2,51 +2,25 @@ FROM camptocamp/odoo-project:12.0-latest as dist
 MAINTAINER 1001Pharmacies <technique+docker@1001pharmacies.com>
 ARG DOCKER_BUILD_DIR
 
-# RUN apt-get update \
-#  && apt-get -fy upgrade \
-#  && apt-get -fy remove libpq5 \
-#  && apt-get -fy install --no-install-recommends -t jessie \
-#             libpq-dev \
-#             make \
-#             postgresql-client \
-#  && apt-get -fy install --no-install-recommends $BUILD_PACKAGE \
-#  && pip install -r /odoo/requirements.txt \
-#  && apt-get -fy remove $BUILD_PACKAGE \
-#  && apt-get -fy purge --auto-remove -o APT::AutoRemove::RecommendsImportant=false -o APT::AutoRemove::SuggestsImportant=false $PURGE_PACKAGE \
-#  && apt-get -fy install --no-install-recommends \
-#             libmagickwand-dev \
-#  && rm -rf /var/lib/apt/lists/* /root/.cache/pip/*
-
 WORKDIR /odoo
 
 FROM dist as local
 
-# odoo base requirement + some others from camp2camp
-COPY /base_requirements.txt /odoo/
-RUN pip install -r base_requirements.txt
-
 # install odoo
-COPY /odoo/src /odoo/src
-COPY /odoo/entrypoint/ /start-entrypoint.d/
-RUN pip install ./src #egg=odoo
+COPY --chown=999:1000 /odoo/src /odoo/src
+RUN pip install -r /odoo/requirements.txt
+RUN pip install -e /odoo/src
 
-# install external addons from OCA
-COPY /ext_requirements.txt /odoo/
-RUN pip install -r ext_requirements.txt
+# install external addons
+COPY --chown=999:1000 /odoo/external-src /odoo/external-src
+RUN pip install -r /odoo/external-src/requirements.txt
 
-COPY /odoo/migration.yml /odoo/
-COPY /odoo/phs.cfg /odoo/
-COPY /odoo/setup.py /odoo/
-# add symlink to local-src used by odoo setup tools
-COPY /odoo/odoo /odoo/odoo
-
-RUN chown -R 999:1000 /odoo
+COPY --chown=999:1000 /odoo/migration.yml /odoo/
 
 FROM local as debug
 
-COPY /dev_requirements.txt /odoo/
-RUN pip install -r dev_requirements.txt
-
+COPY /odoo/debug_requirements.txt /odoo/
+RUN pip install -r debug_requirements.txt
 
 EXPOSE 9999
 
@@ -60,8 +34,16 @@ LABEL com.1001pharmacies.branch=${BRANCH}
 LABEL com.1001pharmacies.target=${TARGET}
 LABEL com.1001pharmacies.version=${VERSION}
 
-COPY /odoo/local-src /odoo/local-src
-RUN pip install -e .
+# install local addons
+COPY --chown=999:1000 /odoo/local-src /odoo/local-src
+COPY --chown=999:1000 /phs.cfg /
+COPY --chown=999:1000 /setup.py /
+RUN ln -s /odoo/local-src /odoo/addons
+RUN pip install -e /
+
+COPY --chown=999:1000 /odoo/entrypoint/ /start-entrypoint.d/
 
 FROM tests as preprod
+COPY /make /odoo/make
+COPY /Makefile /odoo/Makefile
 FROM preprod as prod

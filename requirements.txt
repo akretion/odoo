@@ -1,4 +1,0 @@
-# local project
-./src #egg=odoo
-# local project
--e .
