@@ -18,6 +18,12 @@ RUN pip install -e /odoo/src
 COPY --chown=999:1000 /odoo/external-src /odoo/external-src
 RUN pip install -r /odoo/external-src/requirements.txt
 
+# install local addons in docker entrypoint
+COPY --chown=999:1000 /odoo/phs.cfg /odoo/phs.cfg
+COPY --chown=999:1000 /odoo/setup.py /odoo/setup.py
+RUN ln -s /odoo/local-src /odoo/addons
+RUN ln -s /odoo /odoo/odoo
+
 COPY --chown=999:1000 /odoo/migration.yml /odoo/
 
 FROM local as debug
@@ -37,14 +43,10 @@ LABEL com.1001pharmacies.branch=${BRANCH}
 LABEL com.1001pharmacies.target=${TARGET}
 LABEL com.1001pharmacies.version=${VERSION}
 
-# install local addons
+# copy local files
 COPY --chown=999:1000 /odoo/local-src /odoo/local-src
-COPY --chown=999:1000 /phs.cfg /
-COPY --chown=999:1000 /setup.py /
-RUN ln -s /odoo/local-src /odoo/addons
-RUN pip install -e /
-
 COPY --chown=999:1000 /odoo/entrypoint/ /start-entrypoint.d/
+COPY --chown=999:1000 /odoo/script/ /odoo/script/
 
 FROM tests as preprod
 COPY /make /odoo/make

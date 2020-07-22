@@ -7,7 +7,7 @@ include make/include.mk
 DOCKER_SERVICE := odoo12
 
 .PHONY: install
-install: install-infra install-pgsql-database-odoo bootstrap ## Install application
+install: install-infra install-pgsql-database-odoo12 bootstrap ## Install application
 
 .PHONY: debug
 debug: DOCKER_BUILD_TARGET := debug
