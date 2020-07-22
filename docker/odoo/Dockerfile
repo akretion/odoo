@@ -6,9 +6,12 @@ WORKDIR /odoo
 
 FROM dist as local
 
+# install requirements
+COPY --chown=999:1000 /odoo/requirements.txt /odoo/
+RUN pip install -r /odoo/requirements.txt
+
 # install odoo
 COPY --chown=999:1000 /odoo/src /odoo/src
-RUN pip install -r /odoo/requirements.txt
 RUN pip install -e /odoo/src
 
 # install external addons
