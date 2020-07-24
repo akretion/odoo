@@ -39,6 +39,7 @@ services:
     - RUNNING_ENV=${ODOO12_RUNNING_ENV}
     - UNACCENT=${ODOO12_UNACCENT}
     - WORKERS=${ODOO12_WORKERS}
+    - DEMO=${ODOO12_DEMO}
 
     networks:
       private:

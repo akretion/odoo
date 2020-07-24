@@ -1,22 +1,22 @@
 {
-    "name": "Hello world",
+    "name": "PHS Base",
     "summary": """
-        Hello world dummy module use to illustrate the odoo_base project""",
+        Pharmasimple custom settings""",
     "description": """
-        use as kind of documentation to illustrate how to add module
-        and how to reference it in the requirements.txt.in
+        - install all dependencies
+        - add custom settings
     """,
     "author": "Michael Michot",
-    "website": "http://www.tuxmike.ovh",
-    # Categories can be used to filter modules in modules listing
+    "website": "http://www.pharmasimple.com",
     # Check https://github.com/odoo/odoo/blob/12.0/odoo/addons/base/data/ir_module_category_data.xml
     # for the full list
-    "category": "Uncategorized",
+    "category": "specific_industry_applications",
     "version": "12.0.1.0.1",
     # any module necessary for this one to work correctly
-    "depends": ["base"],
+    "depends": ["base",
+                "shopinvader"],
     # always loaded
-    "data": ["security/ir.model.access.csv", "views/hello_world.xml",],
+    "data": [],
     # only loaded in demonstration mode
-    "demo": ["demo/demo.xml",],
+    "demo": [],
 }
