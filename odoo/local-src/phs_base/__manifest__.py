@@ -14,7 +14,26 @@
     "version": "12.0.1.0.1",
     # any module necessary for this one to work correctly
     "depends": ["base",
-                "shopinvader"],
+                # shopinvader
+                "shopinvader",
+                "shopinvader_assortment",
+                "shopinvader_delivery_carrier",
+                "shopinvader_image",
+                "shopinvader_payment",
+                "shopinvader_payment_manual",
+                "shopinvader_product_stock",
+                "shopinvader_search_engine",
+                "invader_payment",
+                "invader_payment_manual",
+                # contact
+                "contacts",
+                # inventory
+                "stock",
+                # purchase
+                "purchase",
+                # sale
+                "sale",
+                ],
     # always loaded
     "data": [],
     # only loaded in demonstration mode

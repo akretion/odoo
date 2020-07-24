@@ -6,6 +6,15 @@
 # shopinvader modules and dependencies
 https://github.com/OCA/openupgradelib/archive/master.tar.gz
 odoo12_addon_shopinvader
+odoo12_addon_shopinvader_assortment
+odoo12_addon_shopinvader_delivery_carrier
+odoo12_addon_shopinvader_image
+odoo12_addon_shopinvader_payment
+odoo12_addon_shopinvader_payment_manual
+odoo12_addon_shopinvader_product_stock
+odoo12_addon_shopinvader_search_engine
+odoo12_addon_invader_payment
+odoo12_addon_invader_payment_manual
 
 # OCA
 odoo12-addon-web-environment-ribbon==12.0.1.0.0.99.dev11
