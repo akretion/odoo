@@ -18,7 +18,8 @@ debug: build up;## Launch application in debug mode
 reset: down
 	psql -U odoo -d template1 -h localhost -c "DROP DATABASE IF EXISTS odoo12;"
 	psql -U odoo -d template1 -h localhost -c "CREATE DATABASE odoo12;"
-	$(call run,odoo -d odoo12 -i web-environment-ribbon,phs_base --stop-after-init)
+reset: ARGS=odoo -c /etc/odoo.cfg -i web_environment_ribbon,phs_base --stop-after-init 
+reset: run
 
 .PHONY: upgrade
 upgrade: MODULES ?= all
@@ -29,5 +30,5 @@ upgrade: run ## Upgrade application $(MODULES) and exit
 test: DOCKER_BUILD_TARGET := test
 test: MOUNT_DEBUG := true
 test: MODULES ?= all
-test: ARGS=odoo --stop-after-init --test-enable -u $(MODULES)
+test: ARGS=odoo -c /etc/odoo.cfg --stop-after-init --test-enable -u $(MODULES)
 test: run
