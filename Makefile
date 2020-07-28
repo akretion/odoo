@@ -21,7 +21,6 @@ debug: up logs;## Launch application in debug mode
 
 
 .PHONY: reset
-reset: down
 	psql -U odoo -d template1 -h localhost -c "DROP DATABASE IF EXISTS odoo12;"
 	psql -U odoo -d template1 -h localhost -c "CREATE DATABASE odoo12;"
 reset: ARGS=odoo -c /etc/odoo.cfg -i web_environment_ribbon,phs_base --stop-after-init 
