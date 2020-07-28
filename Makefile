@@ -9,10 +9,16 @@ DOCKER_SERVICE := odoo12
 .PHONY: install
 install: install-infra install-pgsql-database-odoo12 bootstrap ## Install application
 
+.PHONY: debug-build
+debug-build: DOCKER_BUILD_TARGET := debug
+debug-build: MOUNT_DEBUG := true
+debug-build: build up logs;## Launch application in debug mode
+
 .PHONY: debug
 debug: DOCKER_BUILD_TARGET := debug
 debug: MOUNT_DEBUG := true
-debug: build up;## Launch application in debug mode
+debug: up logs;## Launch application in debug mode
+
 
 .PHONY: reset
 reset: down
