@@ -1,0 +1,10 @@
+./src/odoo:
+    remotes:
+        odoo: https://github.com/odoo/odoo.git
+        oca: https://github.com/OCA/OCB.git
+        acsone: https://github.com/acsone/odoo.git
+        origin: ssh://git@github.com/akretion/odoo.git
+    merges:
+        - oca 12.0
+        - acsone 12.0-with-setup
+    target: origin 12.0-phs_master

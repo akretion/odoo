@@ -33,6 +33,8 @@
                 "purchase",
                 # sale
                 "sale",
+                "web_environment_ribbon",
+                "server_environment_ir_config_parameter",
                 ],
     # always loaded
     "data": [],
