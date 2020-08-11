@@ -1729,11 +1729,13 @@ class serialized(_column):
     _type = 'serialized'
     __slots__ = []
 
+    # We use postgresql jsonb field and recent version of psycopg already
+    # manage it.
     def _symbol_set_struct(val):
         return json.dumps(val)
 
     def _symbol_get_struct(self, val):
-        return json.loads(val or '{}')
+        return val or {}
 
     _symbol_c = '%s'
     _symbol_f = _symbol_set_struct
