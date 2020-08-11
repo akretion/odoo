@@ -530,7 +530,7 @@ class product_template(osv.osv):
 
         # related to display product product information if is_product_variant
         'barcode': fields.related('product_variant_ids', 'barcode', type='char', string='Barcode', oldname='ean13'),
-        'default_code': fields.related('product_variant_ids', 'default_code', type='char', string='Internal Reference'),
+        'default_code': fields.related('product_variant_ids', 'default_code', type='char', string='Internal Reference', store=True),
         'item_ids': fields.one2many('product.pricelist.item', 'product_tmpl_id', 'Pricelist Items'),
     }
 
@@ -1214,7 +1214,7 @@ class product_product(osv.osv):
         if date is None:
             date = time.strftime(DEFAULT_SERVER_DATETIME_FORMAT)
         price_history_obj = self.pool.get('product.price.history')
-        history_ids = price_history_obj.search(cr, uid, [('company_id', '=', company_id), ('product_id', '=', product_id), ('datetime', '<=', date)], limit=1)
+        history_ids = price_history_obj.search(cr, uid, [('company_id', '=', company_id), ('product_id', '=', product_id), ('datetime', '<=', date)], order='datetime desc,id desc', limit=1)
         if history_ids:
             return price_history_obj.read(cr, uid, history_ids[0], ['cost'], context=context)['cost']
         return 0.0
