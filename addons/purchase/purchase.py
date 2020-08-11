@@ -909,6 +909,22 @@ class ProcurementOrder(models.Model):
             'group_id': group
         }
 
+    @api.model
+    def get_merge_po_keys(self, partner, procurement):
+        return (
+                ('partner_id', '=', partner.id),
+                ('state', '=', 'draft'),
+                ('picking_type_id', '=', procurement.rule_id.picking_type_id.id),
+                ('company_id', '=', procurement.company_id.id),
+                ('dest_address_id', '=', procurement.partner_dest_id.id))
+
+    @api.model
+    def check_merge_po_line(self, line, procurement):
+        if line.product_id == procurement.product_id and line.product_uom == procurement.product_id.uom_po_id:
+            return True
+        else:
+            return False
+
     @api.multi
     def make_po(self):
         cache = {}
@@ -925,12 +941,8 @@ class ProcurementOrder(models.Model):
             group = (gpo == 'fixed' and procurement.rule_id.group_id) or \
                     (gpo == 'propagate' and procurement.group_id) or False
 
-            domain = (
-                ('partner_id', '=', partner.id),
-                ('state', '=', 'draft'),
-                ('picking_type_id', '=', procurement.rule_id.picking_type_id.id),
-                ('company_id', '=', procurement.company_id.id),
-                ('dest_address_id', '=', procurement.partner_dest_id.id))
+            domain = self.get_merge_po_keys(partner, procurement)
+
             if group:
                 domain += (('group_id', '=', group.id),)
 
@@ -959,7 +971,7 @@ class ProcurementOrder(models.Model):
             # Create Line
             po_line = False
             for line in po.order_line:
-                if line.product_id == procurement.product_id and line.product_uom == procurement.product_id.uom_po_id:
+                if self.check_merge_po_line(line, procurement):
                     procurement_uom_po_qty = self.env['product.uom']._compute_qty_obj(procurement.product_uom, procurement.product_qty, procurement.product_id.uom_po_id)
                     seller = self.product_id._select_seller(
                         procurement.product_id,
