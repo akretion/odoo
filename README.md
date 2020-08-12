@@ -1,39 +1,19 @@
-[![Build Status](http://runbot.odoo.com/runbot/badge/flat/1/9.0.svg)](http://runbot.odoo.com/runbot)
-[![Tech Doc](http://img.shields.io/badge/9.0-docs-8f8f8f.svg?style=flat)](http://www.odoo.com/documentation/9.0)
-[![Help](http://img.shields.io/badge/9.0-help-8f8f8f.svg?style=flat)](https://www.odoo.com/forum/help-1)
-[![Nightly Builds](http://img.shields.io/badge/9.0-nightly-8f8f8f.svg?style=flat)](http://nightly.odoo.com/)
+# Odoo OCA repository
 
-Odoo
-----
+This projet is a prebuild of odoo core part. The goal is to speed up the build of the source code in odoo repository
 
-Odoo is a suite of web based open source business apps.
+## To update this code:
 
-The main Odoo Apps include an <a href="https://www.odoo.com/page/crm">Open Source CRM</a>, <a href="https://www.odoo.com/page/website-builder">Website Builder</a>, <a href="https://www.odoo.com/page/e-commerce">eCommerce</a>, <a href="https://www.odoo.com/page/project-management">Project Management</a>, <a href="https://www.odoo.com/page/accounting">Billing &amp; Accounting</a>, <a href="https://www.odoo.com/page/point-of-sale">Point of Sale</a>, <a href="https://www.odoo.com/page/employees">Human Resources</a>, Marketing, Manufacturing, Purchase Management, ...  
+1. Update **spec.yml** 
 
-Odoo Apps can be used as stand-alone applications, but they also integrate seamlessly so you get
-a full-featured <a href="https://www.odoo.com">Open Source ERP</a> when you install several Apps.
+2. Start the build:
 
+     `docker-compose -f etc/docker/docker-compose.yml -p odoo_oca up`
 
-Getting started with Odoo
--------------------------
-For a standard installation please follow the <a href="https://www.odoo.com/documentation/9.0/setup/install.html">Setup instructions</a>
-from the documentation.
+3. Rename the branch **merged** with the name of the issue jira and subject: 
 
-If you are a developer you may type the following command at your terminal:
+    `git branch -m 'merged' 'M2-****_fixsomething'`
+    `git push origin 'M2-****_fixsomething'`
 
-    wget -O- https://raw.githubusercontent.com/odoo/odoo/9.0/odoo.py | python
-
-Then follow <a href="https://www.odoo.com/documentation/9.0/tutorials.html">the developer tutorials</a>
-
-
-For Odoo employees
-------------------
-
-To add the odoo-dev remote use this command:
-
-    $ ./odoo.py setup_git_dev
-
-To fetch odoo merge pull requests refs use this command:
-
-    $ ./odoo.py setup_git_review
-
+4. Test the branch by updating locally the branch in spec.yml of /odoo repository
+5. Merge the branch on master and deploy it in production.

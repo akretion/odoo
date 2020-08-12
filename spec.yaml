@@ -1,4 +1,4 @@
-odoo:
+./:
     modules: []
     remotes:
         oca: https://github.com/oca/odoo
