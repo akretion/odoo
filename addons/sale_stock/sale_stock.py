@@ -26,9 +26,12 @@ from openerp.tools.safe_eval import safe_eval as eval
 from openerp.tools.translate import _
 import pytz
 from openerp import SUPERUSER_ID
+from openerp import fields as new_fields, api
 
 class sale_order(osv.osv):
     _inherit = "sale.order"
+
+    shipped = new_fields.Boolean(compute="_get_shipped", store=True)
 
     def _get_default_warehouse(self, cr, uid, context=None):
         company_id = self.pool.get('res.users')._get_company(cr, uid, context=context)
@@ -37,18 +40,19 @@ class sale_order(osv.osv):
             return False
         return warehouse_ids[0]
 
-    def _get_shipped(self, cr, uid, ids, name, args, context=None):
-        res = {}
-        for sale in self.browse(cr, uid, ids, context=context):
+    @api.multi
+    @api.depends('state')
+    # overriden totally in custom
+    def _get_shipped(self):
+        for sale in self:
             if sale.state == 'shipping_except':
-                res[sale.id] = False
+                sale.shipped = False
                 continue
             group = sale.procurement_group_id
             if group:
-                res[sale.id] = all([proc.state in ['cancel', 'done'] for proc in group.procurement_ids])
+                sale.shipped = all([proc.state in ['cancel', 'done'] for proc in group.procurement_ids])
             else:
-                res[sale.id] = False
-        return res
+                sale.shipped = False
 
     def _get_orders(self, cr, uid, ids, context=None):
         res = set()
@@ -94,10 +98,6 @@ class sale_order(osv.osv):
                 ('prepaid', 'Before Delivery'),
             ], 'Create Invoice', required=True, readonly=True, states={'draft': [('readonly', False)], 'sent': [('readonly', False)]},
             help="""On demand: A draft invoice can be created from the sales order when needed. \nOn delivery order: A draft invoice can be created from the delivery order when the products have been delivered. \nBefore delivery: A draft invoice is created from the sales order and must be paid before the products can be delivered."""),
-        'shipped': fields.function(_get_shipped, string='Delivered', type='boolean', store={
-                'procurement.order': (_get_orders_procurements, ['state'], 10),
-                'sale.order': (lambda s, cr, uid, ids, ctx=None: ids, ['state'], 20),
-            }),
         'warehouse_id': fields.many2one('stock.warehouse', 'Warehouse', required=True),
         'picking_ids': fields.function(_get_picking_ids, method=True, type='one2many', relation='stock.picking', string='Picking associated to this sale'),
     }
