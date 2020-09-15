@@ -2370,13 +2370,18 @@ class stock_move(osv.osv):
             if move.state != 'assigned':
                 qty_already_assigned = move.reserved_availability
                 qty = move.product_qty - qty_already_assigned
-                quants = quant_obj.quants_get_prefered_domain(cr, uid, move.location_id, move.product_id, qty, domain=main_domain[move.id], prefered_domain_list=[], restrict_lot_id=move.restrict_lot_id.id, restrict_partner_id=move.restrict_partner_id.id, context=context)
+                quants = move.move_quants_get_prefered_domain(move.location_id, qty, domain=main_domain[move.id], prefered_domain_list=[], restrict_lot_id=move.restrict_lot_id.id, restrict_partner_id=move.restrict_partner_id.id)
                 quant_obj.quants_reserve(cr, uid, quants, move, context=context)
 
         #force assignation of consumable products and incoming from supplier/inventory/production
         if to_assign_moves:
             self.force_assign(cr, uid, list(to_assign_moves), context=context)
         return True
+
+    @api.multi
+    def move_quants_get_prefered_domain(self, location, qty, domain=None, prefered_domain_list=[], restrict_lot_id=False, restrict_partner_id=False):
+        self.ensure_one()
+        return self.env['stock.quant'].quants_get_prefered_domain(location, self.product_id, qty, domain=domain, prefered_domain_list=prefered_domain_list, restrict_lot_id=restrict_lot_id, restrict_partner_id=restrict_partner_id)
 
     def action_cancel(self, cr, uid, ids, context=None):
         """ Cancels the moves and if all moves are cancelled it cancels the picking.
