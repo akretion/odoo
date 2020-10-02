@@ -68,6 +68,11 @@ class PhoneMixin(models.AbstractModel):
             # in them due to varying field names and assume all others are just "phone" numbers.
             # Note that the limitation of only having 1 phone_sanitized value means that a phone/mobile number
             # may not be calculated as blacklisted even though it is if both field values exist in a model.
+
+            # FIX BUG raise ValueError "Compute method failed to assign phone_blacklisted"
+            if not number_fields:
+                record.mobile_blacklisted = False
+                record.phone_blacklisted = False
             for number_field in number_fields:
                 if 'mobile' in number_field:
                     mobile_blacklisted = record.phone_sanitized_blacklisted and record.phone_get_sanitized_number(number_fname=number_field) == record.phone_sanitized
