@@ -1973,7 +1973,7 @@ class stock_move(osv.osv):
             if not move.move_dest_id and not move.origin_returned_move_id:
                 domain = [('location_from_id', '=', move.location_dest_id.id)]
                 #priority goes to the route defined on the product and product category
-                route_ids = [x.id for x in move.product_id.route_ids + move.product_id.categ_id.total_route_ids]
+                route_ids = [x.id for x in move.product_id.route_ids + move.product_id.categ_id.total_route_ids + move.route_ids]
                 rules = push_obj.search(cr, uid, domain + [('route_id', 'in', route_ids)], order='route_sequence, sequence', context=context)
                 if not rules:
                     #then we search on the warehouse if a rule can apply
