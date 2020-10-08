@@ -143,12 +143,12 @@ class account_fiscalyear_close(osv.osv_memory):
             cr.execute('''
                 INSERT INTO account_move_line (
                      name, create_uid, create_date, write_uid, write_date,
-                     statement_id, journal_id, currency_id, date_maturity,
+                     journal_id, currency_id, date_maturity,
                      partner_id, blocked, credit, state, debit,
                      ref, account_id, period_id, date, move_id, amount_currency,
                      quantity, product_id, company_id)
                   (SELECT name, create_uid, create_date, write_uid, write_date,
-                     statement_id, %s,currency_id, date_maturity, partner_id,
+                      %s,currency_id, date_maturity, partner_id,
                      blocked, credit, 'draft', debit, ref, account_id,
                      %s, (%s) AS date, %s, amount_currency, quantity, product_id, company_id
                    FROM account_move_line
@@ -161,13 +161,13 @@ class account_fiscalyear_close(osv.osv_memory):
             cr.execute('''
                 INSERT INTO account_move_line (
                      name, create_uid, create_date, write_uid, write_date,
-                     statement_id, journal_id, currency_id, date_maturity,
+                     journal_id, currency_id, date_maturity,
                      partner_id, blocked, credit, state, debit,
                      ref, account_id, period_id, date, move_id, amount_currency,
                      quantity, product_id, company_id)
                   (SELECT
                      b.name, b.create_uid, b.create_date, b.write_uid, b.write_date,
-                     b.statement_id, %s, b.currency_id, b.date_maturity,
+                     %s, b.currency_id, b.date_maturity,
                      b.partner_id, b.blocked, b.credit, 'draft', b.debit,
                      b.ref, b.account_id, %s, (%s) AS date, %s, b.amount_currency,
                      b.quantity, b.product_id, b.company_id
@@ -195,12 +195,12 @@ class account_fiscalyear_close(osv.osv_memory):
             cr.execute('''
                 INSERT INTO account_move_line (
                      name, create_uid, create_date, write_uid, write_date,
-                     statement_id, journal_id, currency_id, date_maturity,
+                     journal_id, currency_id, date_maturity,
                      partner_id, blocked, credit, state, debit,
                      ref, account_id, period_id, date, move_id, amount_currency,
                      quantity, product_id, company_id)
                   (SELECT name, create_uid, create_date, write_uid, write_date,
-                     statement_id, %s,currency_id, date_maturity, partner_id,
+                     %s,currency_id, date_maturity, partner_id,
                      blocked, credit, 'draft', debit, ref, account_id,
                      %s, (%s) AS date, %s, amount_currency, quantity, product_id, company_id
                    FROM account_move_line
