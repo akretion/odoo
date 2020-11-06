@@ -253,8 +253,7 @@ class res_partner(osv.Model, format_address):
 
     # image: all image fields are base64 encoded and PIL-supported
     image = openerp.fields.Binary("Image", attachment=True,
-        help="This field holds the image used as avatar for this contact, limited to 1024x1024px",
-        default=lambda self: self._get_default_image(False, True))
+        help="This field holds the image used as avatar for this contact, limited to 1024x1024px")
     image_medium = openerp.fields.Binary("Medium-sized image", attachment=True,
         help="Medium-sized image of this contact. It is automatically "\
              "resized as a 128x128px image, with aspect ratio preserved. "\
@@ -521,9 +520,6 @@ class res_partner(osv.Model, format_address):
 
     @api.model
     def create(self, vals):
-        if vals.get('type') in ['delivery', 'invoice'] and not vals.get('image'):
-            # force no colorize for images with no transparency
-            vals['image'] = self.with_context(partner_type=vals['type'])._get_default_image(False, False)
         if vals.get('website'):
             vals['website'] = self._clean_website(vals['website'])
         # function field not correctly triggered at create -> remove me when

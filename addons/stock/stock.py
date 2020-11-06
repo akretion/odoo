@@ -779,18 +779,26 @@ class stock_picking(models.Model):
             res[id] = {'min_date': False, 'max_date': False, 'priority': '1'}
         if not ids:
             return res
-        cr.execute("""select
+        # Manage case when there are done/cancel moves and ongoing moves
+        # in a same picking.
+        cr.execute("""select distinct on (picking_id)
                 picking_id,
                 min(date_expected),
                 max(date_expected),
-                max(priority)
+                max(priority),
+                CASE
+                    WHEN state = 'cancel' THEN 1
+                    WHEN state = 'done' THEN 2
+                    ELSE 3
+                END as state_order
             from
                 stock_move
             where
                 picking_id IN %s
             group by
-                picking_id""", (tuple(ids),))
-        for pick, dt1, dt2, prio in cr.fetchall():
+                picking_id, state_order
+            ORDER BY picking_id, state_order desc""", (tuple(ids),))
+        for pick, dt1, dt2, prio, dummy in cr.fetchall():
             res[pick]['min_date'] = dt1
             res[pick]['max_date'] = dt2
             res[pick]['priority'] = prio
@@ -2901,7 +2909,8 @@ class stock_move(osv.osv):
         }, context=ctx)
 
         if move.move_dest_id and move.propagate and move.move_dest_id.state not in ('done', 'cancel'):
-            new_move_prop = self.split(cr, uid, move.move_dest_id, qty, context=context)
+            move_dest_lot_id = move.move_dest_id.restrict_lot_id and move.move_dest_id.restrict_lot_id.id or False
+            new_move_prop = self.split(cr, uid, move.move_dest_id, qty, restrict_lot_id=move_dest_lot_id, context=context)
             self.write(cr, uid, [new_move], {'move_dest_id': new_move_prop}, context=context)
         #returning the first element of list returned by action_confirm is ok because we checked it wouldn't be exploded (and
         #thus the result of action_confirm should always be a list of 1 element length)

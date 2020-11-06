@@ -20,7 +20,7 @@ class StockQuantPackage(models.Model):
             weight += pack.weight
         self.weight = weight
 
-    weight = fields.Float(compute='_compute_weight')
+    weight = fields.Float(compute='_compute_weight', store=True)
 
 
 class StockPicking(models.Model):
