@@ -241,10 +241,21 @@ class mrp_production(osv.osv):
         """ Changes state to In Production and writes starting date.
         @return: True
         """
-        workcenter_pool = self.pool.get('mrp.production.workcenter.line')
-        for prod in self.browse(cr, uid, ids):
-            if prod.workcenter_lines:
-                workcenter_pool.signal_workflow(cr, uid, [prod.workcenter_lines[0].id], 'button_start_working')
+        # when starting the first workorder of a MO, Odoo start the production of this MO
+        # and by next commented code, start a random workorder.
+        # so user validates one workorder and as a result, we got 2 started workorders
+        # which is definitely not good. Also, it makes conflict with mrp_operation_dependency
+        # because it may start a pending operations, which is not allowed.
+
+        # I guess this logic may have a interest when starting the production from the MO
+        # directly... But this should not or very rarely happen in SD case.
+        # also, it does not seem really a problem we we do not start any workorder in that
+        # specific case... So lets remove this.
+#        workcenter_pool = self.pool.get('mrp.production.workcenter.line')
+#        for prod in self.browse(cr, uid, ids):
+#            if prod.workcenter_lines:
+#
+#                workcenter_pool.signal_workflow(cr, uid, [prod.workcenter_lines[0].id], 'button_start_working')
         return super(mrp_production,self).action_in_production(cr, uid, ids, context=context)
     
     def action_cancel(self, cr, uid, ids, context=None):
