@@ -1063,10 +1063,9 @@ class SaleOrderLine(models.Model):
         return {}
 
     @api.model
-    def _prepare_add_missing_fields(self, values):
+    def _prepare_add_missing_fields(self, values, onchange_fields):
         """ Deduce missing required fields from the onchange """
         res = {}
-        onchange_fields = ['name', 'price_unit', 'product_uom', 'tax_id']
         if values.get('order_id') and values.get('product_id') and any(f not in values for f in onchange_fields):
             with self.env.do_in_onchange():
                 line = self.new(values)
@@ -1082,7 +1081,7 @@ class SaleOrderLine(models.Model):
             if values.get('display_type', self.default_get(['display_type'])['display_type']):
                 values.update(product_id=False, price_unit=0, product_uom_qty=0, product_uom=False, customer_lead=0)
 
-            values.update(self._prepare_add_missing_fields(values))
+            values.update(self._prepare_add_missing_fields(values, ['name', 'price_unit', 'product_uom', 'tax_id']))
 
         lines = super().create(vals_list)
         for line in lines:
