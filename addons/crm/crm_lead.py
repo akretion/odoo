@@ -251,7 +251,10 @@ class crm_lead(format_address, osv.osv):
         'ref2': fields.reference('Reference 2', selection=openerp.addons.base.res.res_request.referencable_models),
         'phone': fields.char("Phone", size=64),
         'date_deadline': fields.date('Expected Closing', help="Estimate of the date on which the opportunity will be won."),
-        'date_action': fields.date('Next Action Date', select=True),
+        ######## CUSTOM OSKAB #######
+        # Set date_action to datetime to avoid to lose data at update
+        'date_action': fields.datetime('Next Action Date', select=True),
+        ####### END CUSTOM OSKAB #####
         'title_action': fields.char('Next Action'),
         'color': fields.integer('Color Index'),
         'partner_address_name': fields.related('partner_id', 'name', type='char', string='Partner Contact Name', readonly=True),
