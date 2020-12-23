@@ -1369,7 +1369,11 @@ class IrModelSelection(models.Model):
     def _process_ondelete(self):
         """ Process the 'ondelete' of the given selection values. """
         for selection in self:
-            Model = self.env[selection.field_id.model]
+            try:
+               Model = self.env[selection.field_id.model]
+            except Exception:
+                # Model do not exist anymore skip it
+                continue
             # The field may exist in database but not in registry. In this case
             # we allow the field to be skipped, but for production this should
             # be handled through a migration script. The ORM will take care of
