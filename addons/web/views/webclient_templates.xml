@@ -565,6 +565,12 @@
 
     <template id="web.login" name="Login">
         <t t-call="web.login_layout">
+            <p>Bienvenue sur la nouvelle version de votre ERP pour le nouveau marché.
+            <br/>Pour traiter des commandes de l’ancien marché vous pouvez accédez à la version précédente en cliquant ici:</p>
+            <form action="https://ancien-erp.groupe-abilis.fr:8444/web">
+                <button class="btn btn-warning btn-block" type="submit">Ancien Marché</button>
+            </form>
+            <br/>
             <form class="oe_login_form" role="form" t-attf-action="/web/login" method="post" onsubmit="this.action = '/web/login' + location.hash">
                 <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
 
