@@ -1030,7 +1030,15 @@ class account_move_line(osv.osv):
         all_moves = list(set(all_moves) - set(move_ids))
         if unlink_ids:
             if opening_reconciliation:
-                obj_move_rec.write(cr, uid, unlink_ids, {'opening_reconciliation': False})
+                # writing it trigger the constraint which fails... Make it by hard
+                # sql query to avid the constraint in this specific case.
+                # Not sure how it ever worked?! (used when re-generating
+                # opening move in new fiscal year
+                cr.execute("""
+                    UPDATE account_move_reconcile SET opening_reconciliation = false
+                    WHERE id in %s
+                """, (tuple(unlink_ids),))
+#                obj_move_rec.write(cr, uid, unlink_ids, {'opening_reconciliation':False})
             obj_move_rec.unlink(cr, uid, unlink_ids)
             if len(all_moves) >= 2:
                 obj_move_line.reconcile_partial(cr, uid, all_moves, 'auto',context=context)
