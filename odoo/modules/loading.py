@@ -89,7 +89,8 @@ def load_demo(cr, package, idref, mode):
             with cr.savepoint(flush=False):
                 load_data(cr, idref, mode, kind='demo', package=package)
         return True
-    except Exception:  # noqa: BLE001
+    except Exception as e:  # noqa: BLE001
+        raise
         # If we could not install demo data for this module
         _logger.warning(
             "Module %s demo data failed to install, installed without demo data",
