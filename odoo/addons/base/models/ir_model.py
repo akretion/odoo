@@ -1392,6 +1392,9 @@ class IrModelSelection(models.Model):
                 records.invalidate_cache([fname])
 
         for selection in self:
+            if not selection.field_id.model in self.env:
+                # Do not process ondelete if model have been removed
+                continue
             Model = self.env[selection.field_id.model]
             # The field may exist in database but not in registry. In this case
             # we allow the field to be skipped, but for production this should
@@ -1472,7 +1475,7 @@ class IrModelConstraint(models.Model):
         for data in self.sorted(key='id', reverse=True):
             name = tools.ustr(data.name)
             if data.model.model in self.env:
-                table = self.env[data.model.model]._table    
+                table = self.env[data.model.model]._table
             else:
                 table = data.model.model.replace('.', '_')
             typ = data.type
@@ -1925,7 +1928,7 @@ class IrModelData(models.Model):
 
     @api.model
     def xmlid_to_object(self, xmlid, raise_if_not_found=False):
-        """ Return a Model object, or ``None`` if ``raise_if_not_found`` is 
+        """ Return a Model object, or ``None`` if ``raise_if_not_found`` is
         set
         """
         t = self.xmlid_to_res_model_res_id(xmlid, raise_if_not_found)
