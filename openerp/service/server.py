@@ -796,6 +796,7 @@ class WorkerHTTP(Worker):
     def process_work(self):
         try:
             client, addr = self.multi.socket.accept()
+            _logger.info("PROCESS WORK CLIENT %s ADDRESS %s", client, addr)
             self.process_request(client, addr)
         except socket.error, e:
             if e[0] not in (errno.EAGAIN, errno.ECONNABORTED):
