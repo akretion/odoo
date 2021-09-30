@@ -213,6 +213,8 @@ class PaymentAcquirer(models.Model):
     def _check_required_if_provider(self):
         """ If the field has 'required_if_provider="<provider>"' attribute, then it
         required if record.provider is <provider>. """
+        if self._context.get("install_mode"):
+            return
         field_names = []
         enabled_acquirers = self.filtered(lambda acq: acq.state in ['enabled', 'test'])
         for k, f in self._fields.items():
