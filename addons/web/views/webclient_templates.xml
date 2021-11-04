@@ -567,7 +567,7 @@
         <t t-call="web.login_layout">
             <p>Bienvenue sur la nouvelle version de votre ERP pour le nouveau marché.
             <br/>Pour traiter des commandes de l’ancien marché vous pouvez accédez à la version précédente en cliquant ici:</p>
-            <form action="https://ancien-erp.groupe-abilis.fr:8444/web">
+            <form action="https://ancien-erp.groupe-abilis.fr/web">
                 <button class="btn btn-warning btn-block" type="submit">Ancien Marché</button>
             </form>
             <br/>
