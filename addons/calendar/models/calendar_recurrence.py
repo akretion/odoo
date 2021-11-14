@@ -397,7 +397,12 @@ class RecurrenceRule(models.Model):
         :return: iterable of datetimes
         """
         self.ensure_one()
-        dtstart = self._get_start_of_period(dtstart)
+        # when applying reccurence only apply teh reccurence on futur event not
+        # past event
+        # example: create an event in friday, tic reccurence on monday
+        # expected result the reccurency start on friday, we do not expect to have
+        # an event on the previous monday
+        # dtstart = self._get_start_of_period(dtstart)
         if self._is_allday():
             return self._get_rrule(dtstart=dtstart)
 
