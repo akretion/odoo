@@ -66,10 +66,11 @@ var TranslationDataBase = Class.extend(/** @lends instance.TranslationDataBase# 
         var cacheId = session.cache_hashes && session.cache_hashes.translations;
         url = url || '/web/webclient/translations';
         url += '/' + (cacheId ? cacheId : Date.now());
-        return $.get(url, {
-            mods: modules ? modules.join(',') : null,
-            lang: lang || null,
-        }).then(function (trans) {
+        url += '?mods=';
+        url += modules ? modules.join(',') : '';
+        url += '&lang=';
+        url += lang || '';
+        return $.get(url).then(function (trans) {
             self.set_bundle(trans);
         });
     }
