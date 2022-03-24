@@ -90,7 +90,11 @@ def xmlrpc_handle_exception_int(e):
         fault = xmlrpclib.Fault(RPC_FAULT_CODE_WARNING, openerp.tools.ustr(e.value))
         response = xmlrpclib.dumps(fault, allow_none=False, encoding=None)
     elif isinstance(e, openerp.exceptions.Warning) or isinstance(e, openerp.exceptions.RedirectWarning):
-        fault = xmlrpclib.Fault(RPC_FAULT_CODE_WARNING, str(e))
+        # Avoid failures if warning content is unicode with utf-8 char like "é"
+        error = e.message
+        if isinstance(error, unicode):
+            error = error.encode('utf-8')
+        fault = xmlrpclib.Fault(RPC_FAULT_CODE_WARNING, str(error))
         response = xmlrpclib.dumps(fault, allow_none=False, encoding=None)
     elif isinstance (e, openerp.exceptions.AccessError):
         fault = xmlrpclib.Fault(RPC_FAULT_CODE_ACCESS_ERROR, str(e))
@@ -123,7 +127,11 @@ def xmlrpc_handle_exception_string(e):
         fault = xmlrpclib.Fault('warning -- ' + e.name + '\n\n' + e.value, '')
         response = xmlrpclib.dumps(fault, allow_none=False, encoding=None)
     elif isinstance(e, openerp.exceptions.Warning):
-        fault = xmlrpclib.Fault('warning -- Warning\n\n' + str(e), '')
+        # Avoid failures if warning content is unicode with utf-8 char like "é"
+        error = e.message
+        if isinstance(error, unicode):
+            error = error.encode('utf-8')
+        fault = xmlrpclib.Fault('warning -- Warning\n\n' + str(error), '')
         response = xmlrpclib.dumps(fault, allow_none=False, encoding=None)
     elif isinstance(e, openerp.exceptions.AccessError):
         fault = xmlrpclib.Fault('warning -- AccessError\n\n' + str(e), '')
