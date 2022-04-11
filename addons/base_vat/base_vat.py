@@ -9,6 +9,7 @@ _logger = logging.getLogger(__name__)
 
 try:
     import vatnumber
+    from stdnum.exceptions import InvalidComponent
 except ImportError:
     _logger.warning("VAT validation partially unavailable because the `vatnumber` Python library cannot be found. "
                                           "Install it to support more countries, for example with `easy_install vatnumber`.")
@@ -95,6 +96,8 @@ class res_partner(osv.osv):
             # Validate against  VAT Information Exchange System (VIES)
             # see also http://ec.europa.eu/taxation_customs/vies/
             return vatnumber.check_vies(country_code.upper()+vat_number)
+        except InvalidComponent:
+            return False
         except Exception:
             # see http://ec.europa.eu/taxation_customs/vies/checkVatService.wsdl
             # Fault code may contain INVALID_INPUT, SERVICE_UNAVAILABLE, MS_UNAVAILABLE,
