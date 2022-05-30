@@ -419,16 +419,22 @@ class AccountBankStatement(models.Model):
             # Chatter.
             statement.message_post(body=_('Statement %s confirmed.', statement.name))
 
-            # Bank statement report.
-            if statement.journal_id.type == 'bank':
-                content, content_type = self.env.ref('account.action_report_account_statement')._render(statement.id)
-                self.env['ir.attachment'].create({
-                    'name': statement.name and _("Bank Statement %s.pdf", statement.name) or _("Bank Statement.pdf"),
-                    'type': 'binary',
-                    'datas': base64.encodebytes(content),
-                    'res_model': statement._name,
-                    'res_id': statement.id
-                })
+            # Remove broken feature when closing pos session
+            # When priting report if the asset do not exist odoo will commit the
+            # asset (in order to be accessible from the controller for wkhtmltopdf)
+            # So this mean that Odoo will commit all the data of the current transaction
+            # so the current transaction is not transactionnal
+            # TODO open a bug in V16
+
+            #if statement.journal_id.type == 'bank':
+            #    content, content_type = self.env.ref('account.action_report_account_statement')._render(statement.id)
+            #    self.env['ir.attachment'].create({
+            #        'name': statement.name and _("Bank Statement %s.pdf", statement.name) or _("Bank Statement.pdf"),
+            #        'type': 'binary',
+            #        'datas': base64.encodebytes(content),
+            #        'res_model': statement._name,
+            #        'res_id': statement.id
+            #    })
 
         self._check_balance_end_real_same_as_computed()
         self.write({'state': 'confirm', 'date_done': fields.Datetime.now()})
