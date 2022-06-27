@@ -51,6 +51,7 @@ from openerp.sql_db import LazyCursor
 from openerp.tools.translate import _
 from openerp.tools import float_repr, float_round, frozendict, html_sanitize
 import simplejson
+import json
 from openerp import SUPERUSER_ID
 
 # deprecated; kept for backward compatibility only
@@ -1699,6 +1700,40 @@ class serialized(_column):
     def __init__(self, *args, **kwargs):
         kwargs['_prefetch'] = kwargs.get('_prefetch', False)
         super(serialized, self).__init__(*args, **kwargs)
+
+class JobEncoder(json.JSONEncoder):                                                          
+    """ Encode Odoo recordsets so that we can later recompose them """                       
+                                                                                             
+    def default(self, obj):                                                                  
+        if isinstance(obj, models.BaseModel):                                                
+            return {'_type': 'odoo_recordset',                                               
+                    'model': obj._name,                                                      
+                    'ids': obj.ids,                                                          
+                    'uid': obj.env.uid,                                                      
+                    }                                                                        
+        elif isinstance(obj, datetime):                                                      
+            return {'_type': 'datetime_isoformat',                                           
+                    'value': obj.isoformat()}                                                
+        elif isinstance(obj, date):                                                          
+            return {'_type': 'date_isoformat',                                               
+                    'value': obj.isoformat()}                                                
+        return json.JSONEncoder.default(self, obj)
+
+class job_serialized(_column):
+    _type = 'job_serialized'
+
+    __slots__ = []
+
+    def _symbol_set_struct(val):
+        return json.dumps(val, cls=JobEncoder)
+
+    _symbol_c = '%s'
+    _symbol_f = _symbol_set_struct
+    _symbol_set = (_symbol_c, _symbol_f)
+
+    def __init__(self, *args, **kwargs):
+        kwargs['_prefetch'] = kwargs.get('_prefetch', False)
+        super(job_serialized, self).__init__(*args, **kwargs)
 
 # TODO: review completly this class for speed improvement
 class property(function):

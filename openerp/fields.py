@@ -34,6 +34,7 @@ from openerp.sql_db import LazyCursor
 from openerp.tools import float_round, frozendict, html_sanitize, ustr, OrderedSet
 from openerp.tools import DEFAULT_SERVER_DATE_FORMAT as DATE_FORMAT
 from openerp.tools import DEFAULT_SERVER_DATETIME_FORMAT as DATETIME_FORMAT
+import json
 
 DATE_LENGTH = len(date.today().strftime(DATE_FORMAT))
 DATETIME_LENGTH = len(datetime.now().strftime(DATETIME_FORMAT))
@@ -1886,6 +1887,69 @@ class Serialized(Field):
 
     def convert_to_cache(self, value, record, validate=True):
         return value or {}
+
+class JobSerialized(Field):
+    """ Serialized fields provide the storage for sparse fields. """
+    type = 'job_serialized'
+
+ #   def convert_to_column(self, value, record):
+ #       print value, "mm"
+ #       return json.dumps(value, cls=JobEncoder)
+
+    def convert_to_cache(self, value, record, validate=True):
+        # cache format: dict
+        value = value or {}
+        print "mmmmppoop", value
+        if isinstance(value, dict):
+            return value
+        else:
+            return json.loads(value, cls=JobDecoder, env=record.env)
+
+
+class JobEncoder(json.JSONEncoder):
+    """ Encode Odoo recordsets so that we can later recompose them """
+
+    def default(self, obj):
+        if isinstance(obj, models.BaseModel):
+            return {'_type': 'odoo_recordset',
+                    'model': obj._name,
+                    'ids': obj.ids,
+                    'uid': obj.env.uid,
+                    }
+        elif isinstance(obj, datetime):
+            return {'_type': 'datetime_isoformat',
+                    'value': obj.isoformat()}
+        elif isinstance(obj, date):
+            return {'_type': 'date_isoformat',
+                    'value': obj.isoformat()}
+        return json.JSONEncoder.default(self, obj)
+
+
+class JobDecoder(json.JSONDecoder):
+    """ Decode json, recomposing recordsets """
+
+    def __init__(self, *args, **kwargs):
+        env = kwargs.pop('env')
+        super(JobDecoder, self).__init__(
+            object_hook=self.object_hook, *args, **kwargs
+        )
+        assert env
+        self.env = env
+
+    def object_hook(self, obj):
+        if '_type' not in obj:
+            return obj
+        type_ = obj['_type']
+        if type_ == 'odoo_recordset':
+            model = self.env[obj['model']]
+            if obj.get('uid'):
+                model = model.sudo(obj['uid'])
+            return model.browse(obj['ids'])
+        elif type_ == 'datetime_isoformat':
+            return dateutil.parser.parse(obj['value'])
+        elif type_ == 'date_isoformat':
+            return dateutil.parser.parse(obj['value']).date()
+        return obj
 
 
 class Id(Field):
