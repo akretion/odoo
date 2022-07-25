@@ -686,6 +686,91 @@ return AbstractRenderer.extend({
             return dataset1.originIndex - dataset2.originIndex;
         });
 
+        // retrieve missing data in comparison mode
+         if (datasets.length === 2 && datasets[0].data.length != datasets[1].data.length) {
+            var self = this
+
+            function countLabelWords(label) {
+              var words = label.split(' ');
+              return words.filter(word => word !== '').length;
+            }
+
+            function removeYear(label) {
+                if (countLabelWords(label) > 1) {
+                label = label.substring(0, label.lastIndexOf(" "));
+            }
+                return label;
+            };
+            function findUniqValue (set1, set2) {
+                return _.difference(set1, set2)
+            };
+
+            var dataset1 = this.dateClasses.dateSets[0].map(removeYear);
+            var dataset2 = this.dateClasses.dateSets[1].map(removeYear);
+            var data1 = datasets[0].data
+            var data2 = datasets[1].data
+
+            var missingvalues1 = findUniqValue(dataset2, dataset1)
+            var missingvalues2 = findUniqValue(dataset1, dataset2)
+
+            var missingindexes1 = missingvalues1.map(function(value, index) {
+                var set = self.dateClasses.dateSets[1];
+                var idx = set.findIndex(function(data) {
+                    return data.includes(value);
+                    });
+                return idx
+
+            });
+            var missingindexes2 = missingvalues2.map(function(value, index) {
+                var set = self.dateClasses.dateSets[0];
+                var idx = set.findIndex(function(data) {
+                    return data.includes(value);
+                    });
+                return idx
+
+            });
+
+            var fillingvalues = missingindexes2.filter(fillingvalue);
+            function fillingvalue(value) {
+              return value < self.dateClasses.dateSets[0].length -1;
+            }
+
+            missingindexes1.forEach(function (missingindex, index){
+                var idx = missingindex + fillingvalues.length;
+                var label = self.dateClasses.dateSets[1][missingindex]
+                if (countLabelWords(label) > 1) {
+                    label = " " + label.split(" ").slice(-1)
+                } else {
+                    label = ""
+                }
+                if (idx >= self.dateClasses.dateSets[0].length) {
+                    self.dateClasses.dateSets[0].push(missingvalues1[index] + label)
+                    datasets[0].domain.push([])
+                    datasets[0].data.push(0)
+                }
+            });
+
+            missingindexes2.forEach(function (missingindex, index){
+                var label = self.dateClasses.dateSets[1][missingindex]
+                if (countLabelWords(label) > 1) {
+                    label = " " + label.split(" ").slice(-1)
+                } else {
+                    label = ""
+                }
+                if (missingindex >= self.dateClasses.dateSets[1].length -1) {
+                    var idx = missingindex + index + 1;
+                } else {
+                    var idx = missingindex
+                    self.dateClasses.dateSets[1].splice(idx, 0, missingvalues2[index] + label)
+                }
+                datasets[1].domain.splice(idx, 0, [])
+                datasets[1].data.splice(idx, 0, 0)
+            })
+        }
+        labels = Array.apply(null, Array(datasets[1].domain.length)).map(function (x, i) {
+                return i;
+            })
+
         return {
             datasets: datasets,
             labels: labels,
@@ -798,7 +883,6 @@ return AbstractRenderer.extend({
             var $canvas = $('<canvas/>').attr('id', this.chartId);
             $canvasContainer.append($canvas);
             this.$el.append($canvasContainer);
-
             var i = this.state.comparisonFieldIndex;
             if (i === 0) {
                 this.dateClasses = this._getDateClasses(dataPoints);
@@ -831,6 +915,9 @@ return AbstractRenderer.extend({
             var color = self._getColor(index);
             dataset.backgroundColor = color;
         });
+        if (data.datasets.length === 2) {
+            data.datasets.reverse();
+        }
 
         // prepare options
         var options = this._prepareOptions(data.datasets.length);
@@ -886,6 +973,10 @@ return AbstractRenderer.extend({
         data.labels = data.labels.length > 1 ?
             data.labels :
             Array.prototype.concat.apply([], [[FAKE_DATA], data.labels, [FAKE_DATA]]);
+
+        if (data.datasets.length === 2) {
+            data.datasets.reverse();
+        }
 
         // prepare options
         var options = this._prepareOptions(data.datasets.length);
