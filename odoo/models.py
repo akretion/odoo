@@ -1080,10 +1080,10 @@ class BaseModel(MetaModel('DummyModel', (object,), {'_register': False})):
                     # Failed for some reason, perhaps due to invalid data supplied,
                     # rollback savepoint and keep going
                     errors += 1
-                if errors >= 10 and (errors >= i / 10):
+                if errors >= 1000 and (errors >= i / 1000):
                     messages.append({
                         'type': 'warning',
-                        'message': _(u"Found more than 10 errors and more than one error per 10 records, interrupted to avoid showing too many errors.")
+                        'message': _(u"Found more than 1000 errors and more than one error per 1000 records, interrupted to avoid showing too many errors.")
                     })
                     break
 
