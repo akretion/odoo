@@ -310,6 +310,12 @@ def load_information_from_description_file(module, mod_path=None):
         mod_path = get_module_path(module, downloaded=True)
     manifest_file = module_manifest(mod_path)
     if manifest_file:
+        # TODO find a better generic way detect official module
+        # always install odoo module first
+        if mod_path.startswith("/odoo/src"):
+            sequence = 100
+        else:
+            sequence = 200
         # default values for descriptor
         info = {
             'application': False,
@@ -324,7 +330,7 @@ def load_information_from_description_file(module, mod_path=None):
             'post_load': None,
             'version': '1.0',
             'web': False,
-            'sequence': 100,
+            'sequence': sequence,
             'summary': '',
             'website': '',
         }
