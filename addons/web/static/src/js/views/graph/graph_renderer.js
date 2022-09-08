@@ -767,7 +767,9 @@ return AbstractRenderer.extend({
                 datasets[1].data.splice(idx, 0, 0)
             })
         }
-        labels = Array.apply(null, Array(datasets[1].domain.length)).map(function (x, i) {
+
+        var datalength = datasets.length > 1 ? datasets[1].domain.length : datasets[0].domain.length
+        labels = Array.apply(null, Array(datalength)).map(function (x, i) {
                 return i;
             })
 

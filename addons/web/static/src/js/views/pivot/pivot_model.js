@@ -1531,10 +1531,16 @@ var PivotModel = AbstractModel.extend({
                 // if group is known to be empty for the given origin,
                 // we don't need to fetch data fot that origin.
                 if (!self.counts[key] || self.counts[key][originIndex] > 0) {
+                    var index = originIndex
+                    if (originIndex === 0) {
+                        index = 1
+                    } else if (originIndex === 1) {
+                        index = 0
+                    }
                     var subGroup = {
                         rowValues: group.rowValues,
                         colValues: group.colValues,
-                        originIndex: originIndex
+                        originIndex: index
                     };
                     divisors.forEach(function (divisor) {
                         acc.push(self._getGroupSubdivision(subGroup, divisor[0], divisor[1]));
