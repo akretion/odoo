@@ -381,7 +381,12 @@ class AccountMove(models.Model):
     def button_cancel(self):
         for move in self:
             if not move.journal_id.update_posted:
-                raise UserError(_('You cannot modify a posted entry of this journal.\nFirst you should set the journal to allow cancelling entries.'))
+                info = "\n\njournal: %(jrnal)s (%(jrnal_id)s) ; company: %(cpny)s " % {
+                    "jrnal": move.journal_id.name,
+                    "jrnal_id": move.journal_id.id,
+                    "cpny": move.journal_id.company_id.name,
+                }
+                raise UserError(_('You cannot modify a posted entry of this journal.\nFirst you should set the journal to allow cancelling entries.') + info)
             # We remove all the analytics entries for this journal
             move.mapped('line_ids.analytic_line_ids').unlink()
         if self.ids:
