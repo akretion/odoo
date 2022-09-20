@@ -2998,7 +2998,7 @@ class BaseModel(MetaModel('DummyModel', (object,), {'_register': False})):
             # mark non-existing records in missing
             forbidden = missing.exists()
             if forbidden:
-                _logger.info(
+                _logger.warning(
                     _('The requested operation cannot be completed due to record rules: Document type: %s, Operation: %s, Records: %s, User: %s') % \
                     (self._name, 'read', ','.join([str(r.id) for r in forbidden]), self._uid))
                 # store an access error exception in existing records
