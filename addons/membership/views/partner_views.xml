@@ -134,7 +134,7 @@
                             <form string="Memberships">
                                 <group col="2">
                                     <group>
-                                        <field name="membership_id"/>
+                                        <field name="membership_id" options="{'no_create': True, 'no_open': True}"/>
                                         <field name="date"/>
                                         <field name="state"/>
                                     </group>
