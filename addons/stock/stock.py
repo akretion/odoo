@@ -1272,7 +1272,14 @@ class stock_picking(osv.osv):
         prod2move_ids = {}
         still_to_do = []
         #make a dictionary giving for each product, the moves and related quantity that can be used in operation links
-        moves = sorted([x for x in picking.move_lines if x.state not in ('done', 'cancel')], key=lambda x: (((x.state == 'assigned') and -2 or 0) + (x.partially_available and -1 or 0)))
+# CUSTOM OSKAB for advice we need to order the way we link operation to take moves linked to advice first
+        moves = picking.move_lines.filtered(lambda m: m.state not in ("done", "cancel")).sorted(key=lambda x: (((x.state == 'assigned') and -2 or 0) + (x.partially_available and -1 or 0)))
+        if context.get("done_from_advice"):
+            unsorted_moves = moves
+            moves = moves.filtered(lambda m: m.advice_id.id == context["done_from_advice"])
+            moves += (unsorted_moves - moves)
+        moves = [x for x in moves]
+# END CUSTOM OSKAB
         for move in moves:
             if not prod2move_ids.get(move.product_id.id):
                 prod2move_ids[move.product_id.id] = [{'move': move, 'remaining_qty': move.product_qty}]
@@ -1451,8 +1458,11 @@ class stock_picking(osv.osv):
         stock_move_obj = self.pool.get('stock.move')
         for picking in self.browse(cr, uid, picking_ids, context=context):
             if not picking.pack_operation_ids:
-                self.action_done(cr, uid, [picking.id], context=context)
+# CUSTOM OSKAB for advice in case of wrong link we dont want to proceed a picking without operations
+                if not context.get("done_from_advice"):
+                    self.action_done(cr, uid, [picking.id], context=context)
                 continue
+#END CUSTOM OSKAB
             else:
                 need_rereserve, all_op_processed = self.picking_recompute_remaining_quantities(cr, uid, picking, context=context)
                 #create extra moves in the picking (unexpected product moves coming from pack operations)
