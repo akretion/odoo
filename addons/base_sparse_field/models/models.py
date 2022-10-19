@@ -81,8 +81,18 @@ class IrModelFields(models.Model):
     def _instanciate_attrs(self, field_data):
         attrs = super(IrModelFields, self)._instanciate_attrs(field_data)
         if attrs and field_data.get('serialization_field_id'):
-            serialization_record = self.browse(field_data['serialization_field_id'])
-            attrs['sparse'] = serialization_record.name
+            try:
+                serialization_record = self.browse(field_data['serialization_field_id'])
+                attrs['sparse'] = serialization_record.name
+            # FIXME would be nice to find a better way...
+            # field is not loaded yet in case of updating module implementing the serialized
+            # field used by manual fields...
+            # fetch it from sql to avoid error then
+            except AttributeError:
+                self.env.cr.execute("SELECT name FROM ir_model_fields WHERE id = %s", (field_data['serialization_field_id'],))
+                res = self.env.cr.fetchall()
+                if res:
+                    attrs['sparse'] = res[0][0]
         return attrs
 
 
