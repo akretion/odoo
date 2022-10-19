@@ -181,10 +181,7 @@ class ProcurementGroup(models.Model):
     mrp_production_ids = fields.One2many('mrp.production', 'procurement_group_id')
 
     @api.model
-    def run(self, procurements, raise_user_error=True):
-        """ If 'run' is called on a kit, this override is made in order to call
-        the original 'run' method with the values of the components of that kit.
-        """
+    def _get_kit_component_procurements(self, procurements):
         procurements_without_kit = []
         for procurement in procurements:
             bom_kit = self.env['mrp.bom']._bom_find(
@@ -208,6 +205,14 @@ class ProcurementGroup(models.Model):
                         procurement.origin, procurement.company_id, values))
             else:
                 procurements_without_kit.append(procurement)
+        return procurements_without_kit
+
+    @api.model
+    def run(self, procurements, raise_user_error=True):
+        """ If 'run' is called on a kit, this override is made in order to call
+        the original 'run' method with the values of the components of that kit.
+        """
+        procurements_without_kit = self._get_kit_component_procurements(procurements)
         return super(ProcurementGroup, self).run(procurements_without_kit, raise_user_error=raise_user_error)
 
     def _get_moves_to_assign_domain(self, company_id):
