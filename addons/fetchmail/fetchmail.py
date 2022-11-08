@@ -135,18 +135,27 @@ openerp_mailgate: "|/path/to/openerp-mailgate.py --host=localhost -u %(uid)d -p 
         self.write(cr, uid, ids , {'state':'draft'})
         return True
 
+    def _get_connection_type(self, cr, uid, ids, context=None):
+        server = self.browse(cr, uid, ids[0], context=context)
+        return server.type
+
+    def _imap_login(self, cr, uid, ids, connection, context=None):
+        server = self.browse(cr, uid, ids[0], context=context)
+        connection.login(server.user, server.password)
+
     @api.cr_uid_ids_context
     def connect(self, cr, uid, server_id, context=None):
         if isinstance(server_id, (list,tuple)):
             server_id = server_id[0]
         server = self.browse(cr, uid, server_id, context)
-        if server.type == 'imap':
+        connection_type = server._get_connection_type()
+        if connection_type == 'imap':
             if server.is_ssl:
                 connection = IMAP4_SSL(server.server, int(server.port))
             else:
                 connection = IMAP4(server.server, int(server.port))
-            connection.login(server.user, server.password)
-        elif server.type == 'pop':
+            server._imap_login(connection)
+        elif connection_type == 'pop':
             if server.is_ssl:
                 connection = POP3_SSL(server.server, int(server.port))
             else:
@@ -172,9 +181,10 @@ openerp_mailgate: "|/path/to/openerp-mailgate.py --host=localhost -u %(uid)d -p 
             finally:
                 try:
                     if connection:
-                        if server.type == 'imap':
+                        connection_type = server._get_connection_type()
+                        if connection_type == 'imap':
                             connection.close()
-                        elif server.type == 'pop':
+                        elif connection_type == 'pop':
                             connection.quit()
                 except Exception:
                     # ignored, just a consequence of the previous exception
@@ -198,7 +208,8 @@ openerp_mailgate: "|/path/to/openerp-mailgate.py --host=localhost -u %(uid)d -p 
             count, failed = 0, 0
             imap_server = False
             pop_server = False
-            if server.type == 'imap':
+            connection_type = server._get_connection_type()
+            if connection_type == 'imap':
                 try:
                     imap_server = server.connect()
                     imap_server.select()
@@ -228,7 +239,7 @@ openerp_mailgate: "|/path/to/openerp-mailgate.py --host=localhost -u %(uid)d -p 
                     if imap_server:
                         imap_server.close()
                         imap_server.logout()
-            elif server.type == 'pop':
+            elif connection_type == 'pop':
                 try:
                     while True:
                         pop_server = server.connect()
