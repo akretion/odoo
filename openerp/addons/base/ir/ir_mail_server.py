@@ -203,7 +203,7 @@ class ir_mail_server(osv.osv):
             try:
                 smtp = self.connect(smtp_server.smtp_host, smtp_server.smtp_port, user=smtp_server.smtp_user,
                                     password=smtp_server.smtp_pass, encryption=smtp_server.smtp_encryption,
-                                    smtp_debug=smtp_server.smtp_debug)
+                                    smtp_debug=smtp_server.smtp_debug, mail_server=smtp_server)
             except Exception, e:
                 raise osv.except_osv(_("Connection Test Failed!"), _("Here is what we got instead:\n %s") % tools.ustr(e))
             finally:
@@ -214,7 +214,11 @@ class ir_mail_server(osv.osv):
                     pass
         raise osv.except_osv(_("Connection Test Succeeded!"), _("Everything seems properly set up!"))
 
-    def connect(self, host, port, user=None, password=None, encryption=False, smtp_debug=False):
+    def _smtp_login(self, connection, smtp_user, smtp_password, mail_server=False):
+        connection.login(smtp_user, smtp_password)
+
+
+    def connect(self, host, port, user=None, password=None, encryption=False, smtp_debug=False, mail_server=False):
         """Returns a new SMTP connection to the give SMTP server, authenticated
            with ``user`` and ``password`` if provided, and encrypted as requested
            by the ``encryption`` parameter.
@@ -253,7 +257,7 @@ class ir_mail_server(osv.osv):
             # See also bug #597143 and python issue #5285
             user = tools.ustr(user).encode('utf-8')
             password = tools.ustr(password).encode('utf-8') 
-            connection.login(user, password)
+            self._smtp_login(connection, user, password, mail_server=mail_server)
         return connection
 
     def build_email(self, email_from, email_to, subject, body, email_cc=None, email_bcc=None, reply_to=False,
@@ -490,7 +494,7 @@ class ir_mail_server(osv.osv):
 
             smtp = None
             try:
-                smtp = self.connect(smtp_server, smtp_port, smtp_user, smtp_password, smtp_encryption or False, smtp_debug)
+                smtp = self.connect(smtp_server, smtp_port, smtp_user, smtp_password, smtp_encryption or False, smtp_debug, mail_server=mail_server)
                 smtp.sendmail(smtp_from, smtp_to_list, message.as_string())
             finally:
                 if smtp is not None:
