@@ -9,8 +9,7 @@ from odoo import api, fields, models, SUPERUSER_ID, _
 from odoo.exceptions import AccessError, UserError, ValidationError
 from odoo.tools.misc import formatLang, get_lang
 from odoo.osv import expression
-from odoo.tools import float_is_zero, float_compare
-
+from odoo.tools import float_is_zero, float_compare, float_round
 
 
 from werkzeug.urls import url_encode
@@ -1900,6 +1899,20 @@ class SaleOrderLine(models.Model):
 
         price, rule_id = self.order_id.pricelist_id.with_context(product_context).get_product_price_rule(self.product_id, self.product_uom_qty or 1.0, self.order_id.partner_id)
         new_list_price, currency = self.with_context(product_context)._get_real_price_currency(product, rule_id, self.product_uom_qty, self.product_uom, self.order_id.pricelist_id.id)
+
+        # TODO check in V16 if buggy
+        # the value of new_list_price is read using the field "price" on the product
+        # and passing in the context the pricelist id
+        # this mean that the value in new_list_price is rounded
+        # the value of price is not rounded so we are going to compare a rounded
+        # value with an none rounded value
+        # in case that the orginal price is 35.44615384615385
+        # it will compare it with 35.45 and this will
+        # generate a discount of 0.01 %
+        # so we force to round the price here
+        digits = self.env["decimal.precision"].precision_get('Product Price')
+        price = float_round(price, precision_digits=digits)
+        # END of fix
 
         if new_list_price != 0:
             if self.order_id.pricelist_id.currency_id != currency:
