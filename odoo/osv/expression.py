@@ -657,6 +657,12 @@ class expression(object):
             field = model._fields.get(path[0])
             comodel = model.env.get(getattr(field, 'comodel_name', None))
 
+            # make sparse field searchable. Make field as store to force Odoo to search
+            # the sparse field as a normal field
+            # the goal beeing to arrive in __leaf_to_sql
+            if hasattr(field, 'sparse') and field.sparse:
+                field.store = True
+
             # ----------------------------------------
             # FIELD NOT FOUND
             # -> from inherits'd fields -> work on the related model, and add
@@ -1024,6 +1030,10 @@ class expression(object):
                     expr, params = self.__leaf_to_sql(leaf, model, alias)
                     push_result(expr, params)
 
+            # Reverse the store attribute to avoid collateral effects
+            if hasattr(field, 'sparse') and field.sparse:
+                field.store = False
+
         # ----------------------------------------
         # END OF PARSING FULL DOMAIN
         # -> put result in self.result and self.query
@@ -1144,6 +1154,18 @@ class expression(object):
                 params = ['%%%s%%' % pycompat.to_text(right)]
             else:
                 params = [field.convert_to_column(right, model, validate=False)]
+
+        # replace normal syntax by jsonb field syntax
+        if hasattr(model._fields.get(left), 'sparse') and model._fields.get(left).sparse:
+            replaced_str = '%s."%s"' % (table_alias, left)
+            replacing_str = "%s.%s ->> '%s'" % (table_alias, model._fields[left].sparse, left)
+            if isinstance(right, bool):
+                replacing_str = "(%s.%s ->> '%s')::boolean" % (table_alias, model._fields[left].sparse, left)
+            if model._fields.get(left).type == 'float':
+                replacing_str = "(%s.%s ->> '%s')::numeric" % (table_alias, model._fields[left].sparse, left)
+            elif model._fields.get(left).type == 'integer':
+                replacing_str = "(%s.%s ->> '%s')::integer" % (table_alias, model._fields[left].sparse, left)
+            query = query.replace(replaced_str, replacing_str)
 
         return query, params
 
