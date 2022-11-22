@@ -192,6 +192,11 @@ class ProcurementGroup(models.Model):
         """ If 'run' is called on a kit, this override is made in order to call
         the original 'run' method with the values of the components of that kit.
         """
+        procurements_without_kit = self._get_kit_component_procurements(procurements)
+        return super(ProcurementGroup, self).run(procurements_without_kit, raise_user_error=raise_user_error)
+
+    @api.model
+    def _get_kit_component_procurements(self, procurements):
         procurements_without_kit = []
         product_by_company = defaultdict(OrderedSet)
         for procurement in procurements:
@@ -218,7 +223,7 @@ class ProcurementGroup(models.Model):
                         procurement.origin, procurement.company_id, values))
             else:
                 procurements_without_kit.append(procurement)
-        return super(ProcurementGroup, self).run(procurements_without_kit, raise_user_error=raise_user_error)
+        return procurements_without_kit
 
     def _get_moves_to_assign_domain(self, company_id):
         domain = super(ProcurementGroup, self)._get_moves_to_assign_domain(company_id)
