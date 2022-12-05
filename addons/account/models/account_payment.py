@@ -696,7 +696,11 @@ class AccountPayment(models.Model):
                 all_lines = move.line_ids
                 liquidity_lines, counterpart_lines, writeoff_lines = pay._seek_for_lines()
 
-                if len(liquidity_lines) != 1 or len(counterpart_lines) != 1:
+                # NOTE this len check is too strict for factor moves. But the check may happen without
+                # even loading the account_factor module and its _synchronize_from_moves override
+                # like during a module migration. So here we patch the Odoo native check
+                # and skip it if the moves looks like a factor move.
+                if "FACTO/" not in move.display_name and "EB/" not in move.display_name and "BNK1/" not in move.display_name and (len(liquidity_lines) != 1 or len(counterpart_lines) != 1):
                     raise UserError(_(
                         "The journal entry %s reached an invalid state relative to its payment.\n"
                         "To be consistent, the journal entry must always contains:\n"
@@ -705,7 +709,7 @@ class AccountPayment(models.Model):
                         "- optional journal items, all sharing the same account.\n\n"
                     ) % move.display_name)
 
-                if writeoff_lines and len(writeoff_lines.account_id) != 1:
+                if "FACTO/" not in move.display_name and "EB/" not in move.display_name and "BNK1/" not in move.display_name and writeoff_lines and len(writeoff_lines.account_id) != 1:
                     raise UserError(_(
                         "The journal entry %s reached an invalid state relative to its payment.\n"
                         "To be consistent, all the write-off journal items must share the same account."
