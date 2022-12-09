@@ -22,6 +22,9 @@ class IapAccount(models.Model):
     account_token = fields.Char(default=lambda s: uuid.uuid4().hex)
     company_ids = fields.Many2many('res.company')
 
+    def unlink(self):
+        raise Exception("NO UNLINK")
+
     @api.model
     def get(self, service_name, force_create=True):
         domain = [
