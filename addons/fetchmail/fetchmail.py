@@ -193,7 +193,7 @@ openerp_mailgate: "|/path/to/openerp-mailgate.py --host=localhost -u %(uid)d -p 
 
     def _fetch_mails(self, cr, uid, ids=False, context=None):
         if not ids:
-            ids = self.search(cr, uid, [('state','=','done'),('type','in',['pop','imap'])])
+            ids = self.search(cr, uid, [('state','=','done'),('type','in',['pop','imap', 'outlook'])])
         return self.fetch_mail(cr, uid, ids, context=context)
 
     def fetch_mail(self, cr, uid, ids, context=None):
