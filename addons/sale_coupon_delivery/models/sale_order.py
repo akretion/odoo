@@ -16,7 +16,8 @@ class SaleOrder(models.Model):
     def _get_paid_order_lines(self):
         """ Returns the taxes included sale order total amount without the rewards amount"""
         free_reward_product = self.env['coupon.program'].search([('reward_type', '=', 'product')]).mapped('discount_line_product_id')
-        return self.order_line.filtered(lambda x: not (x.is_reward_line or x.is_delivery) or x.product_id in free_reward_product)
+        paid_order_lines = super()._get_paid_order_lines()
+        return paid_order_lines.filtered(lambda x: not x.is_delivery or x.product_id in free_reward_product)
 
     def _get_reward_line_values(self, program):
         if program.reward_type == 'free_shipping':
