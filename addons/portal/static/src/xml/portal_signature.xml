@@ -4,6 +4,12 @@
     <t t-name="portal.portal_signature">
         <form method="POST">
             <input type="hidden" name="csrf_token" t-att-value="widget.csrf_token"/>
+
+	    <input type="checkbox" name="accept_terms" id="accept_terms" style="display:block;float:left"/>*
+	    <p style="/* float: left; */display:block;margin-left:10px">Je reconnais avoir pris connaissance et j’accepte 
+		    <a href="/web/static/sfc.pdf" target="_blank">les conditions générales de vente</a>.
+	    </p>
+
             <div class="o_web_sign_name_and_signature"/>
             <div class="o_portal_sign_controls my-3">
                 <div class="text-right my-3">
