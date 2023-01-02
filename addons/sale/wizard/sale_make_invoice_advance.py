@@ -195,5 +195,6 @@ class SaleAdvancePaymentInv(models.TransientModel):
             'property_account_income_id': self.deposit_account_id.id,
             'taxes_id': [(6, 0, self.deposit_taxes_id.ids)],
             'company_id': False,
+            'fiscal_classification_id': 1,
         }
 
