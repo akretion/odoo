@@ -57,6 +57,7 @@ var SignatureForm = publicWidget.Widget.extend({
     start: function () {
         var self = this;
         this.$confirm_btn = this.$('.o_portal_sign_submit');
+	this.$accept_terms = this.$('#accept_terms')[0];
         this.$controls = this.$('.o_portal_sign_controls');
         var subWidgetStart = this.nameAndSignature.replace(this.$('.o_web_sign_name_and_signature'));
         return Promise.all([subWidgetStart, this._super.apply(this, arguments)]).then(function () {
@@ -110,7 +111,12 @@ var SignatureForm = publicWidget.Widget.extend({
 
         var name = this.nameAndSignature.getName();
         var signature = this.nameAndSignature.getSignatureImage()[1];
-
+        var accept_terms = this.$accept_terms.checked;
+	console.log(this.$accept_terms)
+	console.log(this.$accept_terms.checked)
+	if (!accept_terms) {
+	    alert("Vous devez accepter les condition générales de vente!")
+	} else {
         return this._rpc({
             route: this.callUrl,
             params: _.extend(this.rpcParams, {
@@ -135,6 +141,7 @@ var SignatureForm = publicWidget.Widget.extend({
                 return new Promise(function () { });
             }
         });
+	}
     },
     /**
      * Toggles the submit button depending on the signature state.
@@ -143,7 +150,7 @@ var SignatureForm = publicWidget.Widget.extend({
      */
     _onChangeSignature: function () {
         var isEmpty = this.nameAndSignature.isSignatureEmpty();
-        this.$confirm_btn.prop('disabled', isEmpty);
+	this.$confirm_btn.prop('disabled', isEmpty);
     },
 });
 
