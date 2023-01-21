@@ -383,6 +383,14 @@ def _call_kw_multi(method, self, args, kwargs):
     context, args, kwargs = split_context(method, args, kwargs)
     recs = self.with_context(context or {}).browse(ids)
     _logger.debug("call %s.%s(%s)", recs, method.__name__, Params(args, kwargs))
+    # this propagates is_simulation context in methods when coming
+    # from a simulation record and even before entering a for records loop
+    # where __iter__ would then ensure to set the proper simulation_parent_res_id
+    if len(recs) == 1 and hasattr(recs[0], "is_simulation") and recs[0].is_simulation:
+        recs = recs.with_context(
+            is_simulation=True,
+            simulation_parent_res_id="%s,%s" % (self._table, recs[0].id)
+        )
     result = method(recs, *args, **kwargs)
     return downgrade(method, result, recs, args, kwargs)
 

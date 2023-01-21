@@ -419,6 +419,23 @@ class BaseModel(MetaModel('DummyModel', (object,), {'_register': False})):
         return field
 
     @api.model
+    def _default_is_simulation(self):
+        active_ids = self._context.get('active_ids', [])
+        active_model = self._context.get('active_model')
+        if active_model and active_ids and len(active_ids) == 1:
+            origin = self.env(active_model).browse(active_ids[0])
+            print("DEFAULT IS SIM", origin.is_simulation)
+            if hasattr(origin, "is_simulation") and origin.is_simulation:
+                return True
+        return False
+
+    def _inverse_is_simulation(self):
+        for rec in self:
+            if rec.is_simulation:
+                print("is SIMUL", rec)
+                rec.sudo().active = False  # raise UserError if no active field!
+
+    @api.model
     def _add_magic_fields(self):
         """ Introduce magic fields on the current class
 
@@ -453,6 +470,8 @@ class BaseModel(MetaModel('DummyModel', (object,), {'_register': False})):
             compute='_compute_display_name'))
 
         if self._log_access:
+            add('is_simulation', fields.Boolean(default="_default_is_simulation", inverse="_inverse_is_simulation"))
+            add('active', fields.Boolean(default=True))
             add('create_uid', fields.Many2one(
                 'res.users', string='Created by', automatic=True, readonly=True))
             add('create_date', fields.Datetime(
@@ -2024,7 +2043,7 @@ class BaseModel(MetaModel('DummyModel', (object,), {'_register': False})):
     def _read_group_prepare(self, orderby, aggregated_fields, annotated_groupbys, query):
         """
         Prepares the GROUP BY and ORDER BY terms for the read_group method. Adds the missing JOIN clause
-        to the query if order should be computed against m2o field. 
+        to the query if order should be computed against m2o field.
         :param orderby: the orderby definition in the form "%(field)s %(order)s"
         :param aggregated_fields: list of aggregated fields in the query
         :param annotated_groupbys: list of dictionaries returned by _read_group_process_groupby
@@ -2121,9 +2140,9 @@ class BaseModel(MetaModel('DummyModel', (object,), {'_register': False})):
         return {
             'field': split[0],
             'groupby': gb,
-            'type': field_type, 
+            'type': field_type,
             'display_format': display_formats[gb_function or 'month'] if temporal else None,
-            'interval': time_intervals[gb_function or 'month'] if temporal else None,                
+            'interval': time_intervals[gb_function or 'month'] if temporal else None,
             'tz_convert': tz_convert,
             'qualified_field': qualified_field,
         }
@@ -2148,8 +2167,8 @@ class BaseModel(MetaModel('DummyModel', (object,), {'_register': False})):
     @api.model
     def _read_group_format_result(self, data, annotated_groupbys, groupby, domain):
         """
-            Helper method to format the data contained in the dictionary data by 
-            adding the domain corresponding to its values, the groupbys in the 
+            Helper method to format the data contained in the dictionary data by
+            adding the domain corresponding to its values, the groupbys in the
             context and by properly formatting the date/datetime values.
 
         :param data: a single group
@@ -2228,10 +2247,10 @@ class BaseModel(MetaModel('DummyModel', (object,), {'_register': False})):
                 The possible aggregation functions are the ones provided by PostgreSQL
                 (https://www.postgresql.org/docs/current/static/functions-aggregate.html)
                 and 'count_distinct', with the expected meaning.
-        :param list groupby: list of groupby descriptions by which the records will be grouped.  
+        :param list groupby: list of groupby descriptions by which the records will be grouped.
                 A groupby description is either a field (then it will be grouped by that field)
                 or a string 'field:groupby_function'.  Right now, the only functions supported
-                are 'day', 'week', 'month', 'quarter' or 'year', and they only make sense for 
+                are 'day', 'week', 'month', 'quarter' or 'year', and they only make sense for
                 date/datetime fields.
         :param int offset: optional number of records to skip
         :param int limit: optional max number of records to return
@@ -2239,7 +2258,7 @@ class BaseModel(MetaModel('DummyModel', (object,), {'_register': False})):
                              overriding the natural sort ordering of the
                              groups, see also :py:meth:`~osv.osv.osv.search`
                              (supported only for many2one fields currently)
-        :param bool lazy: if true, the results are only grouped by the first groupby and the 
+        :param bool lazy: if true, the results are only grouped by the first groupby and the
                 remaining groupbys are put in the __context key.  If false, all the groupbys are
                 done in one call.
         :return: list of dictionaries(one dictionary for each record) containing:
@@ -2398,7 +2417,7 @@ class BaseModel(MetaModel('DummyModel', (object,), {'_register': False})):
             # Right now, read_group only fill results in lazy mode (by default).
             # If you need to have the empty groups in 'eager' mode, then the
             # method _read_group_fill_results need to be completely reimplemented
-            # in a sane way 
+            # in a sane way
             result = self._read_group_fill_results(
                 domain, groupby_fields[0], groupby[len(annotated_groupbys):],
                 aggregated_fields, count_field, result, read_group_order=order,
@@ -3935,6 +3954,9 @@ Fields:
             columns0.append(('create_date', "%s", AsIs("(now() at time zone 'UTC')")))
             columns0.append(('write_uid', "%s", self._uid))
             columns0.append(('write_date', "%s", AsIs("(now() at time zone 'UTC')")))
+            if self.env.context.get("is_simulation"):
+                columns0.append(('is_simulation', "%s", True))
+                # TODO fill simulation_parent_id or active_id
 
         for data in data_list:
             # determine column values
@@ -3965,7 +3987,7 @@ Fields:
             # that this limit is well managed by PostgreSQL.
             # In INSERT queries, we inject integers (small) and larger data (TEXT blocks for
             # example).
-            # 
+            #
             # The problem then becomes: how to "estimate" the right size of the batch to have
             # good performance?
             #
@@ -4269,7 +4291,11 @@ Fields:
             # the item[0] trick below works for domain items and '&'/'|'/'!'
             # operators too
             if not any(item[0] == self._active_name for item in domain):
-                domain = [(self._active_name, '=', 1)] + domain
+                domain = [(self._active_name, 'in', (True, False))] + domain
+#                print("domain -----", self, domain)
+#                domain = [(self._active_name, '=', 1)] + domain
+        elif self._active_name:
+            domain = [('active', 'in', (True, False))] + domain
 
         if domain:
             return expression.expression(domain, self).query
@@ -5563,7 +5589,15 @@ Fields:
                     yield self._browse(self.env, (id_,), ids)
         else:
             for id in self._ids:
-                yield self._browse(self.env, (id,), self._prefetch_ids)
+                item = self._browse(self.env, (id,), self._prefetch_ids)
+                # FIXME do it also if > PREFETCH_MAX
+                if self.pool.ready and hasattr(item, "is_simulation") and item.is_simulation:
+                    yield item.with_context(
+                        is_simulation=True,
+                        simulation_parent_res="%s,%s" % (self._table, item.id),
+                    )
+                else:
+                    yield item
 
     def __contains__(self, item):
         """ Test whether ``item`` (record or field name) is an element of ``self``.
@@ -6377,7 +6411,7 @@ Fields:
         field_generators = self._populate_factories()
         if not field_generators:
             return self.browse() # maybe create an automatic generator?
-            
+
         records_batches = []
         generator = populate.chain_factories(field_generators, self._name)
         while record_count <= min_size or not complete:
