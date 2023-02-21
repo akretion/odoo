@@ -210,12 +210,6 @@ class SaleOrder(models.Model):
             return self._get_reward_values_percentage_amount(program)
 
     def _get_reward_values_percentage_amount(self, program):
-        # Invalidate multiline fixed_price discount line as they should apply after % discount
-        fixed_price_products = self._get_applied_programs().filtered(
-            lambda p: p.discount_type == 'fixed_amount'
-        ).mapped('discount_line_product_id')
-        self.order_line.filtered(lambda l: l.product_id in fixed_price_products).write({'price_unit': 0})
-
         reward_dict = {}
         lines = self._get_paid_order_lines()
         amount_total = sum([any(line.tax_id.mapped('price_include')) and line.price_total or line.price_subtotal
@@ -412,7 +406,7 @@ class SaleOrder(models.Model):
         self.ensure_one()
         order = self
         applied_programs = order._get_applied_programs_with_rewards_on_current_order()
-        for program in applied_programs.sorted(lambda ap: (ap.discount_type == 'fixed_amount', ap.discount_apply_on == 'on_order')):
+        for program in applied_programs:
             values = order._get_reward_line_values(program)
             lines = order.order_line.filtered(lambda line: line.product_id == program.discount_line_product_id)
             if program.reward_type == 'discount':
