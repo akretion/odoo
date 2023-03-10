@@ -132,7 +132,6 @@ class PurchaseOrder(models.Model):
             for pick in order.picking_ids.filtered(lambda r: r.state != 'cancel'):
                 pick.action_cancel()
 
-            order.order_line.write({'move_dest_ids':[(5,0,0)]})
 
         return super(PurchaseOrder, self).button_cancel()
 
@@ -582,7 +581,6 @@ class PurchaseOrderLine(models.Model):
         for line in self.filtered(lambda l: not l.display_type):
             for val in line._prepare_stock_moves(picking):
                 values.append(val)
-            line.move_dest_ids.created_purchase_line_id = False
 
         return self.env['stock.move'].create(values)
 
