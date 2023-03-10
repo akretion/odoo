@@ -152,9 +152,6 @@ class PurchaseOrder(models.Model):
             pikings_to_cancel = self.env['stock.picking'].browse(pickings_to_cancel_ids)
             pikings_to_cancel.action_cancel()
 
-        if order_lines:
-            order_lines.write({'move_dest_ids': [(5, 0, 0)]})
-
         return super(PurchaseOrder, self).button_cancel()
 
     def action_view_picking(self):
@@ -613,7 +610,6 @@ class PurchaseOrderLine(models.Model):
         for line in self.filtered(lambda l: not l.display_type):
             for val in line._prepare_stock_moves(picking):
                 values.append(val)
-            line.move_dest_ids.created_purchase_line_id = False
 
         return self.env['stock.move'].create(values)
 
