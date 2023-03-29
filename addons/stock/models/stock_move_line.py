@@ -659,7 +659,8 @@ class StockMoveLine(models.Model):
                 self.location_id.id == reserved_quant.location_id.id and
                 self.lot_id.id == reserved_quant.lot_id.id and
                 self.package_id.id == reserved_quant.package_id.id and
-                self.owner_id.id == reserved_quant.owner_id.id):
+                self.owner_id.id == reserved_quant.owner_id.id and
+                self.result_package_id.id == reserved_quant.package_id.id):
             return True
         return False
 
