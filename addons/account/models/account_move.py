@@ -3032,10 +3032,16 @@ class AccountMove(models.Model):
             ('date', '<=', fields.Date.context_today(self)),
             ('auto_post', '=', True),
         ])
-        for ids in self._cr.split_for_in_conditions(records.ids, size=1000):
-            self.browse(ids)._post()
-            if not self.env.registry.in_test_mode():
-                self._cr.commit()
+        companys = records.mapped("company_id")
+        for company in companys:
+            record_by_company = records.filtered(lambda r: r.company_id == company)
+            try:
+                for ids in self._cr.split_for_in_conditions(record_by_company.ids, size=1000):
+                    self.browse(ids)._post()
+                    if not self.env.registry.in_test_mode():
+                        self._cr.commit()
+            except ValidationError:
+                self._cr.rollback()
 
     # offer the possibility to duplicate thanks to a button instead of a hidden menu, which is more visible
     def action_duplicate(self):
