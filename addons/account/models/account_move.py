@@ -13,8 +13,11 @@ from json import dumps
 
 import ast
 import json
+import logging
 import re
 import warnings
+
+_logger = logging.getLogger(__name__)
 
 #forbidden fields
 INTEGRITY_HASH_MOVE_FIELDS = ('date', 'journal_id', 'company_id')
@@ -3031,16 +3034,20 @@ class AccountMove(models.Model):
             ('state', '=', 'draft'),
             ('date', '<=', fields.Date.context_today(self)),
             ('auto_post', '=', True),
-        ])
+        ], order="date asc")
         companys = records.mapped("company_id")
         for company in companys:
             record_by_company = records.filtered(lambda r: r.company_id == company)
             try:
-                for ids in self._cr.split_for_in_conditions(record_by_company.ids, size=1000):
-                    self.browse(ids)._post()
+                for record in record_by_company:
+                    record._post()
                     if not self.env.registry.in_test_mode():
                         self._cr.commit()
-            except ValidationError:
+            except Exception as e:
+                _logger.error(
+                    "Fail to confirm move %s id %s in company %s. Error %s: ",
+                    record.move_type, record.id, record.company_id.name, e
+                    )
                 self._cr.rollback()
 
     # offer the possibility to duplicate thanks to a button instead of a hidden menu, which is more visible
