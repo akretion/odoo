@@ -616,7 +616,7 @@ class Task(models.Model):
         compute='_compute_partner_phone', inverse='_inverse_partner_phone',
         string="Phone", readonly=False, store=True, copy=False)
     ribbon_message = fields.Char('Ribbon message', compute='_compute_ribbon_message')
-    partner_city = fields.Char(related='partner_id.city', readonly=False)
+#    partner_city = fields.Char(related='partner_id.city', readonly=False)
     manager_id = fields.Many2one('res.users', string='Project Manager', related='project_id.user_id', readonly=True)
     company_id = fields.Many2one(
         'res.company', string='Company', compute='_compute_company_id', store=True, readonly=False,
