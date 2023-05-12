@@ -94,6 +94,7 @@ class Pricelist(models.Model):
         self.ensure_one()
         # Load all rules
         self.env['product.pricelist.item'].flush(['price', 'currency_id', 'company_id', 'active'])
+        #### CUSTOM LABOANDCO
         self.env.cr.execute(
             """
             SELECT
@@ -109,10 +110,11 @@ class Pricelist(models.Model):
                 AND (item.date_start IS NULL OR item.date_start<=%s)
                 AND (item.date_end IS NULL OR item.date_end>=%s)
                 AND (item.active = TRUE)
+                AND (item.brand_id IS NULL OR item.brand_id = any(%s))
             ORDER BY
                 item.applied_on, item.min_quantity desc, categ.complete_name desc, item.id desc
             """,
-            (prod_tmpl_ids, prod_ids, categ_ids, self.id, date, date))
+            (prod_tmpl_ids, prod_ids, categ_ids, self.id, date, date, self.env.context.get("brand_ids", ())))
         # NOTE: if you change `order by` on that query, make sure it matches
         # _order from model to avoid inconstencies and undeterministic issues.
 
@@ -151,6 +153,12 @@ class Pricelist(models.Model):
                 categ_ids[categ.id] = True
                 categ = categ.parent_id
         categ_ids = list(categ_ids)
+########## CUSTOM LABOANDCO #######
+        brand_ids = []
+        for p in products:
+            if p.brand_id:
+                brand_ids.append(p.brand_id.id)
+########## END CUSTOM LABOANDCO #######
 
         is_product_template = products[0]._name == "product.template"
         if is_product_template:
@@ -161,8 +169,9 @@ class Pricelist(models.Model):
         else:
             prod_ids = [product.id for product in products]
             prod_tmpl_ids = [product.product_tmpl_id.id for product in products]
-
-        items = self._compute_price_rule_get_items(products_qty_partner, date, uom_id, prod_tmpl_ids, prod_ids, categ_ids)
+##### CUSTOM LABOANDCO
+        items = self.with_context(brand_ids=brand_ids)._compute_price_rule_get_items(products_qty_partner, date, uom_id, prod_tmpl_ids, prod_ids, categ_ids)
+##### END CUSTOM LABOANDCO
 
         results = {}
         for product, qty, partner in products_qty_partner:
