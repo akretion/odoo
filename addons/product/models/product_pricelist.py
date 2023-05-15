@@ -111,7 +111,7 @@ class Pricelist(models.Model):
                 AND (item.date_start IS NULL OR item.date_start<=%(date)s)
                 AND (item.date_end IS NULL OR item.date_end>=%(date)s)
                 AND (item.active = TRUE)
-            ORDER BY item.applied_on, item.min_quantity desc, categ.parent_left desc
+            ORDER BY item.applied_on, item.min_quantity desc, categ.complete_name desc, item.id desc
         """
 
     def _compute_price_rule_get_items(self, products_qty_partner, date, uom_id, prod_tmpl_ids, prod_ids, categ_ids):
