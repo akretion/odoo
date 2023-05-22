@@ -768,10 +768,12 @@ return AbstractRenderer.extend({
             })
         }
 
-        var datalength = datasets.length > 1 ? datasets[1].domain.length : datasets[0].domain.length
-        labels = Array.apply(null, Array(datalength)).map(function (x, i) {
+        if (!this.chartId) {
+            var datalength = datasets.length > 1 ? datasets[1].domain.length : datasets[0].domain.length
+            labels = Array.apply(null, Array(datalength)).map(function (x, i) {
                 return i;
             })
+        }
 
         return {
             datasets: datasets,
