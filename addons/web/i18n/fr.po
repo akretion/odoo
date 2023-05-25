@@ -5073,6 +5073,27 @@ msgstr "est défini"
 #. openerp-web
 #: code:addons/web/static/src/js/control_panel/search_utils.js:0
 #, python-format
+msgid "starts with"
+msgstr "commence par"
+
+#. module: web
+#. openerp-web
+#: code:addons/web/static/src/js/control_panel/search_utils.js:0
+#, python-format
+msgid "ends with"
+msgstr "finit par"
+
+#. module: web
+#. openerp-web
+#: code:addons/web/static/src/js/control_panel/search_utils.js:0
+#, python-format
+msgid "matches"
+msgstr "correspond à"
+
+#. module: web
+#. openerp-web
+#: code:addons/web/static/src/js/control_panel/search_utils.js:0
+#, python-format
 msgid "is true"
 msgstr "est vrai"
 
