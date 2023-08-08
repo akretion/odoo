@@ -40,6 +40,7 @@ export class BomOverviewTable extends Component {
     }
 
     get showAvailabilities() {
+        this.props.showOptions.availabilities = false;
         return this.props.showOptions.availabilities;
     }
 
@@ -52,6 +53,7 @@ export class BomOverviewTable extends Component {
     }
 
     get showLeadTimes() {
+        this.props.showOptions.leadTimes = false;
         return this.props.showOptions.leadTimes;
     }
 
