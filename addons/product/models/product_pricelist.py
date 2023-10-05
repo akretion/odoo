@@ -217,6 +217,9 @@ class Pricelist(models.Model):
                     if not cat:
                         continue
 
+                if rule.brand_id and product.brand_id != rule.brand_id:
+                    continue
+
                 if rule.base == 'pricelist' and rule.base_pricelist_id:
                     price_tmp = rule.base_pricelist_id._compute_price_rule([(product, qty, partner)], date, uom_id)[product.id][0]  # TDE: 0 = price, 1 = rule
                     price = rule.base_pricelist_id.currency_id._convert(price_tmp, self.currency_id, self.env.company, date, round=False)
