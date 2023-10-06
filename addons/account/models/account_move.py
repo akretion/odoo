@@ -2507,9 +2507,8 @@ class AccountMove(models.Model):
         '''
         if not default_values_list:
             default_values_list = [{} for move in self]
-
         if cancel:
-            lines = self.mapped('line_ids')
+            lines = self.mapped('line_ids').filtered(lambda l: l.account_id.internal_type in ['receivable', 'payable'])
             # Avoid maximum recursion depth.
             if lines:
                 lines.remove_move_reconcile()
