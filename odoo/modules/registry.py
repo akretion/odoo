@@ -308,6 +308,10 @@ class Registry(Mapping):
         for Model in self.models.values():
             if Model._abstract:
                 continue
+            # TODO spend more time but odoo is doing useless recomputing things
+            # on sql view that sometime can cost a lot
+            if Model._name == "report.stock.quantity":
+                continue
             for field in Model._fields.values():
                 # dependencies of custom fields may not exist; ignore that case
                 exceptions = (Exception,) if field.base_field.manual else ()
