@@ -1040,6 +1040,8 @@ class IrModelFields(models.Model):
             by_label = {}
             for field in model._fields.values():
                 if field.string in by_label:
+                    continue
+                    # CUSTOM LABOANDCO remove wrning to avoid too many logs. TODO FIXME
                     _logger.warning('Two fields (%s, %s) of %s have the same label: %s.',
                                     field.name, by_label[field.string], model, field.string)
                 else:
