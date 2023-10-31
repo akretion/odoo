@@ -10,12 +10,6 @@ class AccountMove(models.Model):
     stock_move_id = fields.Many2one('stock.move', string='Stock Move', index='btree_not_null')
     stock_valuation_layer_ids = fields.One2many('stock.valuation.layer', 'account_move_id', string='Stock Valuation Layer')
 
-    def _compute_show_reset_to_draft_button(self):
-        super()._compute_show_reset_to_draft_button()
-        for move in self:
-            if move.sudo().line_ids.stock_valuation_layer_ids:
-                move.show_reset_to_draft_button = False
-
     # -------------------------------------------------------------------------
     # OVERRIDE METHODS
     # -------------------------------------------------------------------------
@@ -60,6 +54,11 @@ class AccountMove(models.Model):
 
         # Unlink the COGS lines generated during the 'post' method.
         self.mapped('line_ids').filtered(lambda line: line.display_type == 'cogs').unlink()
+        # CUSTOM : we allow to reset to draft invoice with layer, so we need to
+        # delete layers when resetting to draft
+        if self.sudo().line_ids.stock_valuation_layer_ids:
+            self.sudo().line_ids.stock_valuation_layer_ids.unlink()
+        # END CUSTOM
         return res
 
     def button_cancel(self):
