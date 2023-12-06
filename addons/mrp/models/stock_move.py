@@ -525,7 +525,16 @@ class StockMove(models.Model):
             # Now that we have every ratio by components, we keep the lowest one to know how many kits we can produce
             # with the quantities delivered of each component. We use the floor division here because a 'partial kit'
             # doesn't make sense.
-            return min(qty_ratios) // 1
+            # CUSTOM
+            # Actually, nothing prevent creating or saling phantom bom with not integer qties
+            # Like you have a bom in meters and you sale 2.8 meters, with the floor division
+            # you'll never have the right quantity delivered in the sale order...
+            # So, let's do the floor division only when bom uom is a unit type...
+            unit_categ = self.env.ref("uom.product_uom_categ_unit")
+            if kit_bom.product_uom_id.category_id == unit_categ:
+                return min(qty_ratios) // 1
+            else:
+                return min(qty_ratios)
         else:
             return 0.0
 
