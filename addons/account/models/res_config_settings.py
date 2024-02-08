@@ -31,6 +31,11 @@ class ResConfigSettings(models.TransientModel):
         readonly=False,
         domain=lambda self: "[('internal_type', '=', 'other'), ('deprecated', '=', False), ('company_id', '=', company_id),\
                              ('user_type_id', '=', %s)]" % self.env.ref('account.data_account_type_expenses').id)
+    # PATCH
+    analytic_currency_exchange_account_id = fields.Many2one(
+        related="company_id.analytic_currency_exchange_account_id", readonly=False
+    )
+    # END PATCH
     has_chart_of_accounts = fields.Boolean(compute='_compute_has_chart_of_accounts', string='Company has a chart of accounts')
     chart_template_id = fields.Many2one('account.chart.template', string='Template', default=lambda self: self.env.company.chart_template_id,
         domain="[('visible','=', True)]")

@@ -178,6 +178,12 @@
                                             <field name="expense_currency_exchange_account_id"/>
                                         </div>
                                     </div>
+                                    <!-- PATCH -->
+                                    <div class="row mt8">
+                                        <label for="analytic_currency_exchange_account_id" class="col-lg-3 o_light_label"/>
+                                        <field name="analytic_currency_exchange_account_id"/>
+                                    </div>
+                                    <!-- END PATCH -->
                                 </div>
                             </div>
                             <div class="col-12 col-lg-6 o_setting_box"

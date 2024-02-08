@@ -4714,6 +4714,13 @@ class AccountMoveLine(models.Model):
 
         return partials_vals_list
 
+    # PATCH
+    def _get_exchange_rate_diff_analytic_account(self):
+        self.ensure_one()
+        default_analytic_account = self.company_id.analytic_currency_exchange_account_id
+        return default_analytic_account
+    # END PATCH
+
     def _create_exchange_difference_move(self):
         ''' Create the exchange difference journal entry on the current journal items.
         :return: An account.move record.
@@ -4744,7 +4751,6 @@ class AccountMoveLine(models.Model):
             '''
             journal = self.env['account.journal'].browse(exchange_diff_move_vals['journal_id'])
             to_reconcile = []
-
             for line in lines:
 
                 exchange_diff_move_vals['date'] = max(exchange_diff_move_vals['date'], line.date)
@@ -4767,6 +4773,9 @@ class AccountMoveLine(models.Model):
                 else:
                     continue
 
+                # PATCH
+                analytic_account = line._get_exchange_rate_diff_analytic_account()
+                # END PATCH
                 sequence = len(exchange_diff_move_vals['line_ids'])
                 exchange_diff_move_vals['line_ids'] += [
                     (0, 0, {
@@ -4788,6 +4797,9 @@ class AccountMoveLine(models.Model):
                         'currency_id': line.currency_id.id,
                         'partner_id': line.partner_id.id,
                         'sequence': sequence + 1,
+                        # PATCH
+                        "analytic_account_id": analytic_account.id or False,
+                        # END PATCH
                     }),
                 ]
 

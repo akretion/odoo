@@ -72,6 +72,12 @@ class ResCompany(models.Model):
         string="Loss Exchange Rate Account",
         domain=lambda self: "[('internal_type', '=', 'other'), ('deprecated', '=', False), ('company_id', '=', id), \
                              ('user_type_id', '=', %s)]" % self.env.ref('account.data_account_type_expenses').id)
+    # PATCH
+    analytic_currency_exchange_account_id = fields.Many2one(
+        "account.analytic.account",
+        string="Currency Change Analytic Account"
+    )
+    # END PATCH
     anglo_saxon_accounting = fields.Boolean(string="Use anglo-saxon accounting")
     property_stock_account_input_categ_id = fields.Many2one('account.account', string="Input Account for Stock Valuation")
     property_stock_account_output_categ_id = fields.Many2one('account.account', string="Output Account for Stock Valuation")
