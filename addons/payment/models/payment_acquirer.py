@@ -659,9 +659,6 @@ class PaymentTransaction(models.Model):
         domain=[('move_type', 'in', ('out_invoice', 'out_refund', 'in_invoice', 'in_refund'))])
     invoice_ids_nbr = fields.Integer(compute='_compute_invoice_ids_nbr', string='# of Invoices')
 
-    _sql_constraints = [
-        ('reference_uniq', 'unique(reference)', 'Reference must be unique!'),
-    ]
 
     @api.depends('invoice_ids')
     def _compute_invoice_ids_nbr(self):
