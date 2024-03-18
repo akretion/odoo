@@ -50,6 +50,11 @@ class Product(models.Model):
              "of its children.\n"
              "Otherwise, this includes goods stored in any Stock Location "
              "with 'internal' type.")
+    reserved_qty = fields.Float(
+        compute='_compute_quantities', compute_sudo=False,
+        digits='Product Unit of Measure',
+        search='_search_reserved_qty',
+        string='Reserved Quantity')
     free_qty = fields.Float(
         'Free To Use Quantity ', compute='_compute_quantities', search='_search_free_qty',
         digits='Product Unit of Measure', compute_sudo=False,
@@ -107,6 +112,7 @@ class Product(models.Model):
             product.incoming_qty = res[product.id]['incoming_qty']
             product.outgoing_qty = res[product.id]['outgoing_qty']
             product.virtual_available = res[product.id]['virtual_available']
+            product.reserved_qty = res[product.id]['reserved_qty']
             product.free_qty = res[product.id]['free_qty']
         # Services need to be set with 0.0 for all quantities
         services = self - products
@@ -114,6 +120,7 @@ class Product(models.Model):
         services.incoming_qty = 0.0
         services.outgoing_qty = 0.0
         services.virtual_available = 0.0
+        services.reserved_qty = 0.0
         services.free_qty = 0.0
 
     def _product_available(self, field_names=None, arg=False):
@@ -170,7 +177,7 @@ class Product(models.Model):
             product_id = product.id
             if not product_id:
                 res[product_id] = dict.fromkeys(
-                    ['qty_available', 'free_qty', 'incoming_qty', 'outgoing_qty', 'virtual_available'],
+                    ['qty_available', 'reserved_qty', 'free_qty', 'incoming_qty', 'outgoing_qty', 'virtual_available'],
                     0.0,
                 )
                 continue
@@ -182,6 +189,7 @@ class Product(models.Model):
                 qty_available = quants_res.get(product_id, [0.0])[0]
             reserved_quantity = quants_res.get(product_id, [False, 0.0])[1]
             res[product_id]['qty_available'] = float_round(qty_available, precision_rounding=rounding)
+            res[product_id]['reserved_qty'] = float_round(reserved_quantity, precision_rounding=rounding)
             res[product_id]['free_qty'] = float_round(qty_available - reserved_quantity, precision_rounding=rounding)
             res[product_id]['incoming_qty'] = float_round(moves_in_res.get(product_id, 0.0), precision_rounding=rounding)
             res[product_id]['outgoing_qty'] = float_round(moves_out_res.get(product_id, 0.0), precision_rounding=rounding)
@@ -308,13 +316,16 @@ class Product(models.Model):
         # TDE FIXME: should probably clean the search methods
         return self._search_product_quantity(operator, value, 'outgoing_qty')
 
+    def _search_reserved_qty(self, operator, value):
+        return self._search_product_quantity(operator, value, 'reserved_qty')
+
     def _search_free_qty(self, operator, value):
         return self._search_product_quantity(operator, value, 'free_qty')
 
     def _search_product_quantity(self, operator, value, field):
         # TDE FIXME: should probably clean the search methods
         # to prevent sql injections
-        if field not in ('qty_available', 'virtual_available', 'incoming_qty', 'outgoing_qty', 'free_qty'):
+        if field not in ('qty_available', 'virtual_available', 'incoming_qty', 'outgoing_qty', 'reserved_qty', 'free_qty'):
             raise UserError(_('Invalid domain left operand %s', field))
         if operator not in ('<', '>', '=', '!=', '<=', '>='):
             raise UserError(_('Invalid domain operator %s', operator))
@@ -462,6 +473,13 @@ class Product(models.Model):
         self.ensure_one()
         action = self.env["ir.actions.actions"]._for_xml_id("stock.stock_move_line_action")
         action['domain'] = [('product_id', '=', self.id)]
+        return action
+
+    def action_view_reserved_stock_move_lines(self):
+        action = self.action_view_stock_move_lines()
+        action['domain'].append(('state', 'not in', ('done', 'draft', 'cancel')))
+        # stock.stock_move_line_action sets search_default_done to 1, so we force it to 0
+        action['context'] = dict(self._context, search_default_done=0)
         return action
 
     def action_view_related_putaway_rules(self):
@@ -616,6 +634,18 @@ class ProductTemplate(models.Model):
     qty_available = fields.Float(
         'Quantity On Hand', compute='_compute_quantities', search='_search_qty_available',
         compute_sudo=False, digits='Product Unit of Measure')
+    reserved_qty = fields.Float(
+        compute='_compute_quantities', compute_sudo=False,
+        search='_search_reserved_qty',
+        digits='Product Unit of Measure',
+        string='Reserved Quantity')
+    free_qty = fields.Float(
+        compute='_compute_quantities', compute_sudo=False,
+        search='_search_free_qty',
+        digits='Product Unit of Measure',
+        string='Free To Use Quantity',
+        help="The free to use quantity corresponds to the quantity on hand "
+             "- reserved quantity")
     virtual_available = fields.Float(
         'Forecasted Quantity', compute='_compute_quantities', search='_search_virtual_available',
         compute_sudo=False, digits='Product Unit of Measure')
@@ -667,6 +697,8 @@ class ProductTemplate(models.Model):
         res = self._compute_quantities_dict()
         for template in self:
             template.qty_available = res[template.id]['qty_available']
+            template.reserved_qty = res[template.id]['reserved_qty']
+            template.free_qty = res[template.id]['free_qty']
             template.virtual_available = res[template.id]['virtual_available']
             template.incoming_qty = res[template.id]['incoming_qty']
             template.outgoing_qty = res[template.id]['outgoing_qty']
@@ -680,16 +712,22 @@ class ProductTemplate(models.Model):
         prod_available = {}
         for template in self:
             qty_available = 0
+            reserved_qty = 0
+            free_qty = 0
             virtual_available = 0
             incoming_qty = 0
             outgoing_qty = 0
             for p in template.product_variant_ids:
                 qty_available += variants_available[p.id]["qty_available"]
+                reserved_qty += variants_available[p.id]["reserved_qty"]
+                free_qty += variants_available[p.id]["free_qty"]
                 virtual_available += variants_available[p.id]["virtual_available"]
                 incoming_qty += variants_available[p.id]["incoming_qty"]
                 outgoing_qty += variants_available[p.id]["outgoing_qty"]
             prod_available[template.id] = {
                 "qty_available": qty_available,
+                "reserved_qty": reserved_qty,
+                "free_qty": free_qty,
                 "virtual_available": virtual_available,
                 "incoming_qty": incoming_qty,
                 "outgoing_qty": outgoing_qty,
@@ -716,6 +754,16 @@ class ProductTemplate(models.Model):
         domain = [('qty_available', operator, value)]
         product_variant_ids = self.env['product.product'].search(domain)
         return [('product_variant_ids', 'in', product_variant_ids.ids)]
+
+    def _search_reserved_qty(self, operator, value):
+        domain = [('reserved_qty', operator, value)]
+        product_variants = self.env['product.product'].search(domain)
+        return [('product_variant_ids', 'in', product_variants.ids)]
+
+    def _search_free_qty(self, operator, value):
+        domain = [('free_qty', operator, value)]
+        product_variants = self.env['product.product'].search(domain)
+        return [('product_variant_ids', 'in', product_variants.ids)]
 
     def _search_virtual_available(self, operator, value):
         domain = [('virtual_available', operator, value)]
@@ -857,6 +905,13 @@ class ProductTemplate(models.Model):
         self.ensure_one()
         action = self.env["ir.actions.actions"]._for_xml_id("stock.stock_move_line_action")
         action['domain'] = [('product_id.product_tmpl_id', 'in', self.ids)]
+        return action
+
+    def action_view_reserved_stock_move_lines(self):
+        action = self.action_view_stock_move_lines()
+        action['domain'].append(('state', 'not in', ('done', 'draft', 'cancel')))
+        # stock.stock_move_line_action sets search_default_done to 1, so we force it to 0
+        action['context'] = dict(self._context, search_default_done=0)
         return action
 
     def action_open_product_lot(self):
