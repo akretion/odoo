@@ -480,6 +480,14 @@ class AccountMoveLine(models.Model):
                     values.append(product.description_purchase)
             line.name = '\n'.join(values)
 
+    # dummy hook for account_fiscal_position_option
+    def _get_product_accounts(self, fiscal_position):
+        self.ensure_one()
+        accounts = self.with_company(self.company_id).product_id\
+            .product_tmpl_id.get_product_accounts(fiscal_pos=fiscal_position)
+        return accounts
+
+    @api.depends('display_type', 'company_id')
     def _compute_account_id(self):
         term_lines = self.filtered(lambda line: line.display_type == 'payment_term')
         if term_lines:
@@ -573,8 +581,7 @@ class AccountMoveLine(models.Model):
         for line in product_lines:
             if line.product_id:
                 fiscal_position = line.move_id.fiscal_position_id
-                accounts = line.with_company(line.company_id).product_id\
-                    .product_tmpl_id.get_product_accounts(fiscal_pos=fiscal_position)
+                accounts = line._get_product_accounts(fiscal_position)
                 if line.move_id.is_sale_document(include_receipts=True):
                     line.account_id = accounts['income'] or line.account_id
                 elif line.move_id.is_purchase_document(include_receipts=True):
@@ -842,25 +849,29 @@ class AccountMoveLine(models.Model):
             else:
                 line.price_total = line.price_subtotal = subtotal
 
+    def _get_unit_price(self):
+        self.ensure_one()
+        if self.move_id.is_sale_document(include_receipts=True):
+            document_type = 'sale'
+        elif self.move_id.is_purchase_document(include_receipts=True):
+            document_type = 'purchase'
+        else:
+            document_type = 'other'
+        return self.product_id._get_tax_included_unit_price(
+            self.move_id.company_id,
+            self.move_id.currency_id,
+            self.move_id.date,
+            document_type,
+            fiscal_position=self.move_id.fiscal_position_id,
+            product_uom=self.product_uom_id,
+        )
+
     @api.depends('product_id', 'product_uom_id')
     def _compute_price_unit(self):
         for line in self:
             if not line.product_id or line.display_type in ('line_section', 'line_note'):
                 continue
-            if line.move_id.is_sale_document(include_receipts=True):
-                document_type = 'sale'
-            elif line.move_id.is_purchase_document(include_receipts=True):
-                document_type = 'purchase'
-            else:
-                document_type = 'other'
-            line.price_unit = line.product_id._get_tax_included_unit_price(
-                line.move_id.company_id,
-                line.move_id.currency_id,
-                line.move_id.date,
-                document_type,
-                fiscal_position=line.move_id.fiscal_position_id,
-                product_uom=line.product_uom_id,
-            )
+            line.price_unit = line._get_unit_price()
 
     @api.depends('product_id', 'product_uom_id')
     def _compute_tax_ids(self):

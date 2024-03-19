@@ -386,6 +386,11 @@ class SaleOrderLine(models.Model):
             if not line.product_uom or (line.product_id.uom_id.id != line.product_uom.id):
                 line.product_uom = line.product_id.uom_id
 
+    # small hook for account_fiscal_position_option
+    def _taxes_from_fpos(self, fiscal_position, taxes):
+        self.ensure_one()
+        return fiscal_position.map_tax(taxes)
+
     @api.depends('product_id', 'company_id')
     def _compute_tax_id(self):
         taxes_by_product_company = defaultdict(lambda: self.env['account.tax'])
@@ -409,7 +414,7 @@ class SaleOrderLine(models.Model):
                 if cache_key in cached_taxes:
                     result = cached_taxes[cache_key]
                 else:
-                    result = fiscal_position.map_tax(taxes)
+                    result = line._taxes_from_fpos(fiscal_position, taxes)
                     cached_taxes[cache_key] = result
                 # If company_id is set, always filter taxes by the company
                 line.tax_id = result
@@ -431,6 +436,23 @@ class SaleOrderLine(models.Model):
                     date=line.order_id.date_order,
                 )
 
+    def _get_price_unit(self):
+        self.ensure_one()
+        if not self.product_uom or not self.product_id:
+            price_unit = 0.0
+        else:
+            line = self.with_company(self.company_id)
+            price = line._get_display_price()
+            price_unit = line.product_id._get_tax_included_unit_price_from_price(
+                price,
+                line.currency_id or line.order_id.currency_id,
+                product_taxes=line.product_id.taxes_id.filtered(
+                    lambda tax: tax.company_id == line.env.company
+                ),
+                fiscal_position=line.order_id.fiscal_position_id,
+            )
+        return price_unit
+
     @api.depends('product_id', 'product_uom', 'product_uom_qty')
     def _compute_price_unit(self):
         for line in self:
@@ -438,19 +460,7 @@ class SaleOrderLine(models.Model):
             # manually edited
             if line.qty_invoiced > 0 or (line.product_id.expense_policy == 'cost' and line.is_expense):
                 continue
-            if not line.product_uom or not line.product_id:
-                line.price_unit = 0.0
-            else:
-                line = line.with_company(line.company_id)
-                price = line._get_display_price()
-                line.price_unit = line.product_id._get_tax_included_unit_price_from_price(
-                    price,
-                    line.currency_id or line.order_id.currency_id,
-                    product_taxes=line.product_id.taxes_id.filtered(
-                        lambda tax: tax.company_id == line.env.company
-                    ),
-                    fiscal_position=line.order_id.fiscal_position_id,
-                )
+            line.price_unit = line._get_price_unit()
 
     def _get_display_price(self):
         """Compute the displayed unit price for a given line.

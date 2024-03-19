@@ -1052,13 +1052,18 @@ class PurchaseOrderLine(models.Model):
             price_subtotal=self.price_subtotal,
         )
 
+    # dummy hook for account_fiscal_position_option
+    def _taxes_from_fiscal_position(self, fpos, taxes):
+        self.ensure_one()
+        return fpos.map_tax(taxes)
+
     def _compute_tax_id(self):
         for line in self:
             line = line.with_company(line.company_id)
             fpos = line.order_id.fiscal_position_id or line.order_id.fiscal_position_id._get_fiscal_position(line.order_id.partner_id)
             # filter taxes by company
             taxes = line.product_id.supplier_taxes_id.filtered(lambda r: r.company_id == line.env.company)
-            line.taxes_id = fpos.map_tax(taxes)
+            line.taxes_id = line._taxes_from_fiscal_position(fpos, taxes)
 
     @api.depends('invoice_lines.move_id.state', 'invoice_lines.quantity', 'qty_received', 'product_uom_qty', 'order_id.state')
     def _compute_qty_invoiced(self):
