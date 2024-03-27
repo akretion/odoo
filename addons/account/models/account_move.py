@@ -3491,7 +3491,7 @@ class AccountMoveLine(models.Model):
 
         if self.move_id.is_sale_document(include_receipts=True):
             # Out invoice.
-            if self.product_id.taxes_id:
+            if self.product_id.taxes_id.filtered(lambda tax: tax.company_id == self.move_id.company_id):
                 tax_ids = self.product_id.taxes_id.filtered(lambda tax: tax.company_id == self.move_id.company_id)
             elif self.account_id.tax_ids:
                 tax_ids = self.account_id.tax_ids
@@ -3501,7 +3501,7 @@ class AccountMoveLine(models.Model):
                 tax_ids = self.move_id.company_id.account_sale_tax_id
         elif self.move_id.is_purchase_document(include_receipts=True):
             # In invoice.
-            if self.product_id.supplier_taxes_id:
+            if self.product_id.supplier_taxes_id.filtered(lambda tax: tax.company_id == self.move_id.company_id):
                 tax_ids = self.product_id.supplier_taxes_id.filtered(lambda tax: tax.company_id == self.move_id.company_id)
             elif self.account_id.tax_ids:
                 tax_ids = self.account_id.tax_ids
