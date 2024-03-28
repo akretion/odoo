@@ -744,6 +744,7 @@ class SupplierInfo(models.Model):
     _description = "Supplier Pricelist"
     _order = 'sequence, min_qty DESC, price, id'
 
+    partner_id = fields.Many2one(related="name")
     name = fields.Many2one(
         'res.partner', 'Vendor',
         ondelete='cascade', required=True,
