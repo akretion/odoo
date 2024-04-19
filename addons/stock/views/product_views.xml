@@ -40,7 +40,9 @@
             <field name="arch" type="xml">
                 <field name="price" position="after">
                     <field name="qty_available" attrs="{'invisible':[('type', '!=', 'product')]}" optional="show" decoration-danger="virtual_available &lt; 0" decoration-warning="virtual_available == 0" decoration-bf="1"/>
-                    <field name="virtual_available" attrs="{'invisible':[('type', '!=', 'product')]}" string="Forecasted Quantity" optional="show" decoration-danger="virtual_available &lt; 0" decoration-warning="virtual_available == 0"/>
+                    <field name="reserved_qty" attrs="{'invisible': [('type', '!=', 'product')]}" optional="show"/>
+                    <field name="free_qty" attrs="{'invisible': [('type', '!=', 'product')]}" optional="show" string="Free Qty"/>
+                    <field name="virtual_available" attrs="{'invisible':[('type', '!=', 'product')]}" string="Forecasted Quantity" optional="hide" decoration-danger="virtual_available &lt; 0" decoration-warning="virtual_available == 0"/>
                 </field>
             </field>
         </record>
@@ -53,7 +55,9 @@
                 <field name="uom_id" position="before">
                     <field name="show_on_hand_qty_status_button" invisible="1"/>
                     <field name="qty_available" attrs="{'invisible':[('show_on_hand_qty_status_button', '=', False)]}" optional="show" decoration-danger="qty_available &lt; 0"/>
-                    <field name="virtual_available" attrs="{'invisible':[('show_on_hand_qty_status_button', '=', False)]}" optional="show" decoration-danger="virtual_available &lt; 0" decoration-bf="1"/>
+                    <field name="reserved_qty" attrs="{'invisible':[('show_on_hand_qty_status_button', '=', False)]}" optional="show"/>
+                    <field name="free_qty" attrs="{'invisible':[('show_on_hand_qty_status_button', '=', False)]}" optional="show" string="Free Qty"/>
+                    <field name="virtual_available" attrs="{'invisible':[('show_on_hand_qty_status_button', '=', False)]}" optional="hide" decoration-danger="virtual_available &lt; 0" decoration-bf="1"/>
                 </field>
                 <field name="default_code" position="after">
                     <field name="responsible_id" widget="many2one_avatar_user"/>
@@ -234,6 +238,18 @@
                                     </span>
                                     <span class="o_stat_text">On Hand</span>
                                </div>
+                       </button>
+                       <button class="oe_stat_button"
+                               name="action_view_reserved_stock_move_lines"
+                               icon="fa-building-o"
+                               type="object" attrs="{'invisible': [('type', '!=', 'product')]}">
+                               <div class="o_field_widget o_stat_info">
+                                    <span class="o_stat_value">
+                                        <field name="reserved_qty" widget="statinfo" nolabel="1" class="mr4"/>
+                                        <field name="uom_name"/>
+                                    </span>
+                                    <span class="o_stat_text">Reserved</span>
+                               </div>
                         </button>
                         <button type="object"
                             name="action_product_forecast_report"
@@ -322,6 +338,18 @@
                                     <field name="uom_name"/>
                                 </span>
                                 <span class="o_stat_text">On Hand</span>
+                            </div>
+                        </button>
+                        <button type="object"
+                            name="action_view_reserved_stock_move_lines"
+                            attrs="{'invisible':[('show_on_hand_qty_status_button', '=', False)]}"
+                            class="oe_stat_button" icon="fa-cubes">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_value" widget="statinfo">
+                                    <field name="reserved_qty" widget="statinfo" nolabel="1" class="mr4"/>
+                                    <field name="uom_name"/>
+                                </span>
+                                <span class="o_stat_text">Reserved</span>
                             </div>
                         </button>
                         <button type="object"

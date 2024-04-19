@@ -1850,6 +1850,7 @@
 
 <!-- Alternative extension of the language_selector to make it look like an -->
 <!-- inline list instead of a dropdown -->
+<!--
 <template id="language_selector_inline" inherit_id="website.language_selector" primary="True">
     <xpath expr="//*[contains(@t-attf-class, 'js_language_selector')]" position="attributes">
         <attribute name="t-attf-class" remove="dropup" separator=" "/>
@@ -1873,6 +1874,7 @@
         </t>
     </xpath>
 </template>
+-->
 
 <template id="placeholder_header_language_selector" name="Placeholder Header Language Selector"/>
 

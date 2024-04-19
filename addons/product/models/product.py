@@ -416,20 +416,23 @@ class ProductProduct(models.Model):
                     # This is the case from existing stock reordering rules.
                     self.write({'active': False})
 
-    @api.returns('self', lambda value: value.id)
-    def copy(self, default=None):
-        """Variants are generated depending on the configuration of attributes
-        and values on the template, so copying them does not make sense.
-
-        For convenience the template is copied instead and its first variant is
-        returned.
-        """
+# AKRETION HACK 04/04/2024
+# Disable this inherit of copy() on product.product that blocks the duplication
+# of product.product
+#    @api.returns('self', lambda value: value.id)
+#    def copy(self, default=None):
+#        """Variants are generated depending on the configuration of attributes
+#        and values on the template, so copying them does not make sense.
+#
+#        For convenience the template is copied instead and its first variant is
+#        returned.
+#        """
         # copy variant is disabled in https://github.com/odoo/odoo/pull/38303
         # this returns the first possible combination of variant to make it
         # works for now, need to be fixed to return product_variant_id if it's
         # possible in the future
-        template = self.product_tmpl_id.copy(default=default)
-        return template.product_variant_id or template._create_first_product_variant()
+#        template = self.product_tmpl_id.copy(default=default)
+#        return template.product_variant_id or template._create_first_product_variant()
 
     @api.model
     def _search(self, args, offset=0, limit=None, order=None, count=False, access_rights_uid=None):

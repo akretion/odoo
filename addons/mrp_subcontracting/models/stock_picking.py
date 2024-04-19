@@ -31,7 +31,6 @@ class StockPicking(models.Model):
     # Action methods
     # -------------------------------------------------------------------------
     def _action_done(self):
-        res = super(StockPicking, self)._action_done()
 
         for move in self.move_lines.filtered(lambda move: move.is_subcontract):
             # Auto set qty_producing/lot_producing_id of MO if there isn't tracked component
@@ -76,6 +75,10 @@ class StockPicking(models.Model):
             production_moves = productions_to_done.move_raw_ids | productions_to_done.move_finished_ids
             production_moves.write({'date': minimum_date - timedelta(seconds=1)})
             production_moves.move_line_ids.write({'date': minimum_date - timedelta(seconds=1)})
+        # AKRETION HACK 17/04/2024
+        # make mrp_subcontracting compatible with stock_no_negative
+        # More info on https://github.com/OCA/stock-logistics-workflow/issues/1025
+        res = super(StockPicking, self)._action_done()
         return res
 
     def action_record_components(self):

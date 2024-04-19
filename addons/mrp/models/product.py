@@ -195,6 +195,7 @@ class ProductProduct(models.Model):
             ratios_qty_available = []
             ratios_incoming_qty = []
             ratios_outgoing_qty = []
+            ratios_reserved_qty = []
             ratios_free_qty = []
 
             for component, bom_sub_lines in bom_sub_lines_grouped.items():
@@ -219,6 +220,7 @@ class ProductProduct(models.Model):
                         "qty_available": float_round(component.qty_available, precision_rounding=rounding),
                         "incoming_qty": float_round(component.incoming_qty, precision_rounding=rounding),
                         "outgoing_qty": float_round(component.outgoing_qty, precision_rounding=rounding),
+                        "reserved_qty": float_round(component.reserved_qty, precision_rounding=rounding),
                         "free_qty": float_round(component.free_qty, precision_rounding=rounding),
                     }
                 )
@@ -226,6 +228,7 @@ class ProductProduct(models.Model):
                 ratios_qty_available.append(component_res["qty_available"] / qty_per_kit)
                 ratios_incoming_qty.append(component_res["incoming_qty"] / qty_per_kit)
                 ratios_outgoing_qty.append(component_res["outgoing_qty"] / qty_per_kit)
+                ratios_reserved_qty.append(component_res["reserved_qty"] / qty_per_kit)
                 ratios_free_qty.append(component_res["free_qty"] / qty_per_kit)
             if bom_sub_lines and ratios_virtual_available:  # Guard against all cnsumable bom: at least one ratio should be present.
                 res[product.id] = {
@@ -233,6 +236,7 @@ class ProductProduct(models.Model):
                     'qty_available': min(ratios_qty_available) * bom_kits[product].product_qty // 1,
                     'incoming_qty': min(ratios_incoming_qty) * bom_kits[product].product_qty // 1,
                     'outgoing_qty': min(ratios_outgoing_qty) * bom_kits[product].product_qty // 1,
+                    'reserved_qty': min(ratios_reserved_qty) * bom_kits[product].product_qty // 1,
                     'free_qty': min(ratios_free_qty) * bom_kits[product].product_qty // 1,
                 }
             else:
@@ -241,6 +245,7 @@ class ProductProduct(models.Model):
                     'qty_available': 0,
                     'incoming_qty': 0,
                     'outgoing_qty': 0,
+                    'reserved_qty': 0,
                     'free_qty': 0,
                 }
 
