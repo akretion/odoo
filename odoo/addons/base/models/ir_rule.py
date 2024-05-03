@@ -244,13 +244,21 @@ class IrRule(models.Model):
         # so it is relatively safe here to include the list of rules and record names.
         rules = self._get_failing(records, mode=operation).sudo()
 
-        records_description = ', '.join(['%s (id=%s)' % (rec.display_name, rec.id) for rec in records[:6].sudo()])
+        # TODO propose in V18
+        def format_message(rec):
+            if "company_id" in rec._fields:
+                return "%s (id=%s) (%s)" %(rec.display_name, rec.id, rec.company_id.name)
+            else:
+                return "%s (id=%s)" %(rec.display_name, rec.id)
+
+        records_description = ', '.join([format_message(rec) for rec in records[:6].sudo()])
         failing_records = _("Records: %s", records_description)
 
         user_description = '%s (id=%s)' % (self.env.user.name, self.env.user.id)
         failing_user = _("User: %s", user_description)
 
         rules_description = '\n'.join('- %s' % rule.name for rule in rules)
+
         failing_rules = _("This restriction is due to the following rules:\n%s", rules_description)
         if any('company_id' in (r.domain_force or []) for r in rules):
             failing_rules += "\n\n" + _('Note: this might be a multi-company issue.')
