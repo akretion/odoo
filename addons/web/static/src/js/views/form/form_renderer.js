@@ -516,7 +516,8 @@ var FormRenderer = BasicRenderer.extend({
     * @returns {integer}
     */
     _renderButtonBoxNbButtons: function () {
-        return [2, 2, 2, 4][config.device.size_class] || 7;
+        /* show 14 buttons before adding 'More' dropdown list (instead of 7 in native odoo code) */
+        return [2, 2, 2, 4][config.device.size_class] || 14;
     },
     /**
      * Do not render a field widget if it is always invisible.
