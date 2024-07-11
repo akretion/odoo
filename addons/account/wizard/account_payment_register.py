@@ -102,6 +102,7 @@ class AccountPaymentRegister(models.TransientModel):
     ], default='open', string="Payment Difference Handling")
     writeoff_account_id = fields.Many2one('account.account', string="Difference Account", copy=False,
         domain="[('deprecated', '=', False), ('company_id', '=', company_id)]")
+    writeoff_analytic_account_id = fields.Many2one('account.analytic.account', string="Difference Analytic Account", copy=False, domain="[('company_id', '=', company_id)]")
     writeoff_label = fields.Char(string='Journal Item Label', default='Write-Off',
         help='Change label of the counterpart that will hold the payment difference')
 
@@ -510,6 +511,7 @@ class AccountPaymentRegister(models.TransientModel):
                 'name': self.writeoff_label,
                 'amount': self.payment_difference,
                 'account_id': self.writeoff_account_id.id,
+                'analytic_account_id': self.writeoff_analytic_account_id.id or False,
             }
         return payment_vals
 

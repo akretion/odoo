@@ -65,6 +65,10 @@
                                            string="Post Difference In"
                                            options="{'no_create': True}"
                                            attrs="{'required': [('payment_difference_handling', '=', 'reconcile')]}"/>
+                                    <label for="writeoff_analytic_account_id" class="oe_edit_only" string="Analytic Account" groups="analytic.group_analytic_accounting"/>
+                                    <field name="writeoff_analytic_account_id"
+                                           groups="analytic.group_analytic_accounting"
+                                           options="{'no_create': True}" />
                                     <label for="writeoff_label" class="oe_edit_only" string="Label"/>
                                     <field name="writeoff_label" attrs="{'required': [('payment_difference_handling', '=', 'reconcile')]}"/>
                                 </div>

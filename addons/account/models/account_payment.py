@@ -286,6 +286,7 @@ class AccountPayment(models.Model):
                 'credit': -write_off_balance if write_off_balance < 0.0 else 0.0,
                 'partner_id': self.partner_id.id,
                 'account_id': write_off_line_vals.get('account_id'),
+                'analytic_account_id': write_off_line_vals.get('analytic_account_id'),
             })
         return line_vals_list
 
@@ -788,6 +789,7 @@ class AccountPayment(models.Model):
                     'name': writeoff_lines[0].name,
                     'amount': writeoff_amount,
                     'account_id': writeoff_lines[0].account_id.id,
+                    'analytic_account_id': writeoff_lines[0].analytic_account_id.id,
                 }
             else:
                 write_off_line_vals = {}
