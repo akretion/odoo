@@ -312,6 +312,12 @@ def load_manifest(module, mod_path=None):
     with tools.file_open(manifest_file, mode='r') as f:
         manifest.update(ast.literal_eval(f.read()))
 
+    if "17" in manifest["version"]:
+        # 17.0 version module could be candidate to be compatible with 18.0 odoo core
+        # because views are similar
+        # then we by pass this constraint
+        manifest["version"] = manifest["version"].replace("17", "18")
+
     if not manifest['description']:
         readme_path = [opj(mod_path, x) for x in README
                        if os.path.isfile(opj(mod_path, x))]
