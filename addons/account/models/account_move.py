@@ -3974,7 +3974,7 @@ class AccountMoveLine(models.Model):
             for unreconciled lines, and something in-between for partially reconciled lines.
         """
         for line in self:
-            if line.id and (line.account_id.reconcile or line.account_id.internal_type == 'liquidity'):
+            if (line.id or isinstance(line.id, models.NewId)) and (line.account_id.reconcile or line.account_id.internal_type == 'liquidity'):
                 reconciled_balance = sum(line.matched_credit_ids.mapped('amount')) \
                                      - sum(line.matched_debit_ids.mapped('amount'))
                 reconciled_amount_currency = sum(line.matched_credit_ids.mapped('debit_amount_currency'))\
