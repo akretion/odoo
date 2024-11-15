@@ -361,7 +361,7 @@ class SaleOrderLine(models.Model):
         remaining.free_qty_today = False
         remaining.qty_available_today = False
 
-    @api.depends('product_id', 'route_id', 'order_id.warehouse_id', 'product_id.route_ids')
+    @api.depends('product_id', 'route_id', 'warehouse_id', 'product_id.route_ids')
     def _compute_is_mto(self):
         """ Verify the route of the product based on the warehouse
             set 'is_available' at True if the product availibility in stock does
@@ -375,7 +375,7 @@ class SaleOrderLine(models.Model):
             product_routes = line.route_id or (product.route_ids + product.categ_id.total_route_ids)
 
             # Check MTO
-            mto_route = line.order_id.warehouse_id.mto_pull_id.route_id
+            mto_route = line.warehouse_id.mto_pull_id.route_id
             if not mto_route:
                 try:
                     mto_route = self.env['stock.warehouse']._find_global_route('stock.route_warehouse0_mto', _('Make To Order'))
@@ -519,7 +519,7 @@ class SaleOrderLine(models.Model):
             'date_planned': date_planned,
             'date_deadline': date_deadline,
             'route_ids': self.route_id,
-            'warehouse_id': self.order_id.warehouse_id or False,
+            'warehouse_id': self.warehouse_id or False,
             'partner_id': self.order_id.partner_shipping_id.id,
             'product_description_variants': self.with_context(lang=self.order_id.partner_id.lang)._get_sale_order_line_multiline_description_variants(),
             'company_id': self.order_id.company_id,
