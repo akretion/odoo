@@ -407,8 +407,9 @@ export class PaymentScreen extends Component {
         }
     }
     async _askForCustomerIfRequired() {
+        // HACK for pos_check_deposit
         const splitPayments = this.paymentLines.filter(
-            (payment) => payment.payment_method_id.split_transactions
+            (payment) => payment.payment_method_id.identify_customer
         );
         if (splitPayments.length && !this.currentOrder.get_partner()) {
             const paymentMethod = splitPayments[0].payment_method_id;

@@ -1123,8 +1123,13 @@ class PosSession(models.Model):
         if not payment_method.journal_id:
             return self.env['account.move.line']
         outstanding_account = payment_method.outstanding_account_id
-        accounting_partner = self.env["res.partner"]._find_accounting_partner(payment.partner_id)
-        destination_account = accounting_partner.property_account_receivable_id
+        # HACK for pos_check_deposit
+        if payment.partner_id:
+            accounting_partner = self.env["res.partner"]._find_accounting_partner(payment.partner_id)
+            destination_account = accounting_partner.property_account_receivable_id
+        else:
+            accounting_partner = False
+            destination_account = self._get_receivable_account(payment_method)
 
         if float_compare(amounts['amount'], 0, precision_rounding=self.currency_id.rounding) < 0:
             # revert the accounts because account.payment doesn't accept negative amount.
@@ -1132,7 +1137,8 @@ class PosSession(models.Model):
 
         account_payment = self.env['account.payment'].create({
             'amount': abs(amounts['amount']),
-            'partner_id': payment.partner_id.id,
+            # HACK for pos_check_deposit
+            'partner_id': accounting_partner and accounting_partner.id or False,
             'journal_id': payment_method.journal_id.id,
             'force_outstanding_account_id': outstanding_account.id,
             'destination_account_id': destination_account.id,
@@ -1141,7 +1147,8 @@ class PosSession(models.Model):
             'pos_session_id': self.id,
         })
         account_payment.action_post()
-        return account_payment.move_id.line_ids.filtered(lambda line: line.account_id == accounting_partner.property_account_receivable_id)
+        # HACK for pos_check_deposit
+        return account_payment.move_id.line_ids.filtered(lambda line: line.account_id == destination_account)
 
     def _create_cash_statement_lines_and_cash_move_lines(self, data):
         # Create the split and combine cash statement lines and account move lines.
@@ -1292,8 +1299,8 @@ class PosSession(models.Model):
                 lines.filtered(lambda line: not line.reconciled).reconcile()
 
         for payment, lines in payment_to_receivable_lines.items():
-            if payment.partner_id.property_account_receivable_id.reconcile:
-                lines.filtered(lambda line: not line.reconciled).reconcile()
+            # HACK for pos_check_deposit
+            lines.filtered(lambda line: line.account_id.reconcile and not line.reconciled).reconcile()
 
         # Reconcile invoice payments' receivable lines. But we only do when the account is reconcilable.
         # Though `account_default_pos_receivable_account_id` should be of type receivable, there is currently
@@ -1333,16 +1340,17 @@ class PosSession(models.Model):
                 return self._credit_amounts(partial_args, amount, amount_converted)
 
     def _get_split_receivable_vals(self, payment, amount, amount_converted):
-        accounting_partner = self.env["res.partner"]._find_accounting_partner(payment.partner_id)
-        if not accounting_partner:
-            raise UserError(_("You have enabled the \"Identify Customer\" option for %(payment_method)s payment method,"
-                              "but the order %(order)s does not contain a customer.",
-                              payment_method=payment.payment_method_id.name,
-                              order=payment.pos_order_id.name))
+        # HACK for pos_check_deposit
+        if payment.partner_id:
+            accounting_partner = self.env["res.partner"]._find_accounting_partner(payment.partner_id)
+            account_id = accounting_partner.property_account_receivable_id.id
+        else:
+            accounting_partner = False
+            account_id = self._get_receivable_account(payment.payment_method_id).id
         partial_vals = {
-            'account_id': accounting_partner.property_account_receivable_id.id,
+            'account_id': account_id,
             'move_id': self.move_id.id,
-            'partner_id': accounting_partner.id,
+            'partner_id': accounting_partner and accounting_partner.id or False,
             'name': '%s - %s' % (self.name, payment.payment_method_id.name),
         }
         return self._debit_amounts(partial_vals, amount, amount_converted)
