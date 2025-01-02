@@ -271,9 +271,10 @@ export class PaymentScreen extends Component {
         }
     }
     async _finalizeValidation() {
-        if (this.currentOrder.is_paid_with_cash() || this.currentOrder.get_change()) {
+        //Cashbox open always if want to open on cash uncomment if
+        //if (this.currentOrder.is_paid_with_cash() || this.currentOrder.get_change()) {
             this.hardwareProxy.openCashbox();
-        }
+        //}
 
         this.currentOrder.date_order = serializeDateTime(luxon.DateTime.now());
         for (const line of this.paymentLines) {
