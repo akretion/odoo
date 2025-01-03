@@ -10,12 +10,16 @@ class PosCustomerDisplay(http.Controller):
         pos_config_sudo = request.env["pos.config"].sudo().browse(int(id_))
         if not odoo.tools.consteq(access_token, pos_config_sudo.access_token) or pos_config_sudo.customer_display_type == "none":
             raise odoo.exceptions.AccessDenied()
-        return request.render(
-            "point_of_sale.customer_display_index",
-            {
-                "session_info": {
-                    **request.env["ir.http"].get_frontend_session_info(),
-                    **pos_config_sudo._get_customer_display_data(),
-                },
+        context = {
+            "session_info": {
+                **request.env["ir.http"].get_frontend_session_info(),
+                **pos_config_sudo._get_customer_display_data(),
             },
+        }
+        # context['session_info'] contains by default {'translationURL': '/website/translations'}
+        # we need to remove the key 'translationURL' to make translation work
+        if 'translationURL' in context['session_info']:
+            context['session_info'].pop('translationURL')
+        return request.render(
+            "point_of_sale.customer_display_index", context,
         )
