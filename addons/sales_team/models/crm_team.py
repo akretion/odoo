@@ -10,6 +10,7 @@ from dateutil.relativedelta import relativedelta
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError
 from odoo.release import version
+from odoo.osv import expression
 
 
 class CrmTeam(models.Model):
@@ -29,6 +30,13 @@ class CrmTeam(models.Model):
         ], limit=1)
         if not team and 'default_team_id' in self.env.context:
             team = self.env['crm.team'].browse(self.env.context.get('default_team_id'))
+        # Patch because company domain is not applied all the time
+        if not domain:
+            domain = [('company_id', 'in', [False, self.env.company.id])]
+        else:
+            domain = expression.AND(
+               [domain, [('company_id', 'in', [False, self.env.company.id])]]
+           )
         return team or self.env['crm.team'].search(domain or [], limit=1)
 
     def _get_default_favorite_user_ids(self):
