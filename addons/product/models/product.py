@@ -492,9 +492,7 @@ class ProductProduct(models.Model):
             sellers = self.env['product.supplierinfo'].sudo().browse(self.env.context.get('seller_id')) or []
             if not sellers and partner_ids:
                 product_supplier_info = supplier_info_by_template.get(product.product_tmpl_id, [])
-                sellers = [x for x in product_supplier_info if x.product_id and x.product_id == product]
-                if not sellers:
-                    sellers = [x for x in product_supplier_info if not x.product_id]
+                sellers = [x for x in product_supplier_info if self._is_valid_seller(x, x.name, None, fields.Date.today(), False, False)]
                 # Filter out sellers based on the company. This is done afterwards for a better
                 # code readability. At this point, only a few sellers should remain, so it should
                 # not be a performance issue.
@@ -630,18 +628,26 @@ class ProductProduct(models.Model):
             return False
         return True
 
-    def _select_seller(self, partner_id=False, quantity=0.0, date=None, uom_id=False, params=False):
-        self.ensure_one()
+    def _select_sellers(self, partner_id=False, quantity=0.0, date=None, uom_id=False, params=False):
+        res = self.env['product.supplierinfo']
         if date is None:
             date = fields.Date.context_today(self)
-
-        res = self.env['product.supplierinfo']
         sellers = self._prepare_sellers(params)
         sellers = sellers.filtered(lambda s: not s.company_id or s.company_id.id == self.env.company.id)
         for seller in sellers:
             if self._is_valid_seller(seller, partner_id, quantity, date, uom_id, res):
                 res |= seller
+        return res
+
+    def _select_seller(self, partner_id=False, quantity=0.0, date=None, uom_id=False, params=False):
+        self.ensure_one()
+        res = self._select_sellers(partner_id, quantity, date, uom_id, params)
         return res.sorted('price')[:1]
+
+    def _select_seller_per_qty(self, partner_id=False, quantity=0.0, date=None, uom_id=False, params=False):
+        self.ensure_one()
+        res = self._select_sellers(partner_id, quantity, date, uom_id, params)
+        return res.sorted('min_qty')
 
     def price_compute(self, price_type, uom=False, currency=False, company=None):
         # TDE FIXME: delegate to template or not ? fields are reencoded here ...
