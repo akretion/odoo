@@ -342,7 +342,8 @@ class AccountMoveLine(models.Model):
     )
     discount = fields.Float(
         string='Discount (%)',
-        digits='Discount',
+        # CUSTOM ecotax discount management
+        digits=None,
         default=0.0,
     )
 

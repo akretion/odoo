@@ -146,7 +146,8 @@ class SaleOrderLine(models.Model):
     discount = fields.Float(
         string="Discount (%)",
         compute='_compute_discount',
-        digits='Discount',
+        # CUSTOM - ecotax discount management
+        digits=None,
         store=True, readonly=False, precompute=True)
 
     # The price_reduce field should not be used for amounts computations
