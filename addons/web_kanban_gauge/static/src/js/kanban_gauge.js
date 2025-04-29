@@ -122,12 +122,12 @@ var GaugeWidget = AbstractField.extend({
         var context = this.$canvas[0].getContext('2d');
         this.chart = new Chart(context, config);
 
-        var humanValue = utils.human_number(gauge_value, 1);
-        var $value = $('<span class="o_gauge_value">').text(humanValue);
-        $value.css({'text-align': 'center', position: 'absolute', left: 0, right: 0, bottom: '6px', 'font-weight': 'bold'});
-        this.$el.append($value);
-    },
-});
+            var humanValue = utils.human_number(gauge_value, 0, 2);
+            var $value = $('<span class="o_gauge_value">').text(humanValue);
+            $value.css({ 'text-align': 'center', position: 'absolute', left: 0, right: 0, bottom: '6px', 'font-weight': 'bold' });
+            this.$el.append($value);
+        },
+    });
 
 field_registry.add("gauge", GaugeWidget);
 
