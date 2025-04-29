@@ -24,17 +24,29 @@ def start_end_date_for_period(period, default_start_date=False, default_end_date
     :return: (start_date, end_date), dates in string format, False if the period is
     not defined or unknown"""
     today = date.today()
-    if period == 'daily':
+    if period == "daily":
         start_date = today
         end_date = start_date
-    elif period == 'weekly':
+    elif period == "weekly":
         start_date = today + relativedelta(weekday=MO(-1))
         end_date = start_date + timedelta(days=7)
-    elif period == 'monthly':
+    elif period == "monthly":
         start_date = today.replace(day=1)
         end_date = today + relativedelta(months=1, day=1, days=-1)
-    elif period == 'yearly':
+    elif period == "yearly":
         start_date = today.replace(month=1, day=1)
+        end_date = today.replace(month=12, day=31)
+    elif period == "t1":
+        start_date = today.replace(month=1, day=1)
+        end_date = today.replace(month=3, day=31)
+    elif period == "t2":
+        start_date = today.replace(month=4, day=1)
+        end_date = today.replace(month=6, day=30)
+    elif period == "t3":
+        start_date = today.replace(month=7, day=1)
+        end_date = today.replace(month=9, day=30)
+    elif period == "t4":
+        start_date = today.replace(month=10, day=1)
         end_date = today.replace(month=12, day=31)
     else:  # period == 'once':
         start_date = default_start_date  # for manual goal, start each time
@@ -75,13 +87,19 @@ class Challenge(models.Model):
     user_ids = fields.Many2many('res.users', 'gamification_challenge_users_rel', string="Users", help="List of users participating to the challenge")
     user_domain = fields.Char("User domain", help="Alternative to a list of users")
 
-    period = fields.Selection([
-            ('once', "Non recurring"),
-            ('daily', "Daily"),
-            ('weekly', "Weekly"),
-            ('monthly', "Monthly"),
-            ('yearly', "Yearly")
-        ], default='once',
+    period = fields.Selection(
+        [
+            ("once", "Non recurring"),
+            ("daily", "Daily"),
+            ("weekly", "Weekly"),
+            ("monthly", "Monthly"),
+            ("yearly", "Yearly"),
+            ("t1", "Trimestre 1"),
+            ("t2", "Trimestre 2"),
+            ("t3", "Trimestre 3"),
+            ("t4", "Trimestre 4"),
+        ],
+        default="once",
         string="Periodicity",
         help="Period of automatic goal assigment. If none is selected, should be launched manually.",
         required=True)
