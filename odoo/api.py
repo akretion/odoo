@@ -867,7 +867,7 @@ class Environment(Mapping):
         """ Return whether `record` is protected against invalidation or
             recomputation for `field`.
         """
-        return record.id in self._protected.get(field, ())
+        return record._ids[0] in self._protected.get(field, ())
 
     def protected(self, field):
         """ Return the recordset for which ``field`` should not be invalidated or recomputed. """
@@ -910,7 +910,7 @@ class Environment(Mapping):
 
     def is_to_compute(self, field, record):
         """ Return whether ``field`` must be computed on ``record``. """
-        return record.id in self.transaction.tocompute.get(field, ())
+        return record._ids[0] in self.transaction.tocompute.get(field, ())
 
     def not_to_compute(self, field, records):
         """ Return the subset of ``records`` for which ``field`` must not be computed. """
@@ -1131,14 +1131,15 @@ class Cache:
     def contains(self, record, field):
         """ Return whether ``record`` has a value for ``field``. """
         field_cache = self._get_field_cache(record, field)
+        record_id = record._ids[0]
         if field.translate:
-            cache_value = field_cache.get(record.id, EMPTY_DICT)
+            cache_value = field_cache.get(record_id, EMPTY_DICT)
             if cache_value is None:
                 return True
             lang = (record.env.lang or 'en_US') if field.translate is True else record.env._lang
             return lang in cache_value
 
-        return record.id in field_cache
+        return record_id in field_cache
 
     def contains_field(self, field):
         """ Return whether ``field`` has a value for at least one record. """
@@ -1178,7 +1179,7 @@ class Cache:
             dirty must raise an exception
         """
         field_cache = self._set_field_cache(record, field)
-        record_id = record.id
+        record_id = record._ids[0]
 
         if field.translate and value is not None:
             # only for model translated fields
@@ -1226,7 +1227,7 @@ class Cache:
                 if value is None:
                     cache_values.append(None)
                 else:
-                    cache_value = field_cache.get(record.id) or {}
+                    cache_value = field_cache.get(record._ids[0]) or {}
                     cache_value[lang] = value
                     if not (field.compute or field.store and record._origin):
                         cache_value.setdefault('en_US', value)
@@ -1315,7 +1316,7 @@ class Cache:
         """
         field_patches = self._patches.get(field)
         if field_patches:
-            ids = field_patches.pop(record.id, ())
+            ids = field_patches.pop(record._ids[0], ())
             if ids:
                 value = tuple(dict.fromkeys(value + tuple(ids)))
         self.set(record, field, value)
@@ -1323,7 +1324,7 @@ class Cache:
 
     def remove(self, record, field):
         """ Remove the value of ``field`` for ``record``. """
-        assert record.id not in self._dirty.get(field, ())
+        assert record._ids[0] not in self._dirty.get(field, ())
         try:
             field_cache = self._set_field_cache(record, field)
             del field_cache[record._ids[0]]
@@ -1387,7 +1388,7 @@ class Cache:
     def get_fields(self, record):
         """ Return the fields with a value for ``record``. """
         for name, field in record._fields.items():
-            if name != 'id' and record.id in self._get_field_cache(record, field):
+            if name != 'id' and record._ids[0] in self._get_field_cache(record, field):
                 yield field
 
     def get_records(self, model, field, all_contexts=False):

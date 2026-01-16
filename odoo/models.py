@@ -7100,7 +7100,7 @@ class BaseModel(metaclass=MetaModel):
             (:class:`Field` instance), including ``self``.
             Return at most ``limit`` records.
         """
-        ids = expand_ids(self.id, self._prefetch_ids)
+        ids = expand_ids(self._ids[0], self._prefetch_ids)
         ids = self.env.cache.get_missing_ids(self.browse(ids), field)
         if limit:
             ids = itertools.islice(ids, limit)
