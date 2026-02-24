@@ -26,6 +26,9 @@ odoo.define('web.searchUtils', function (require) {
             { symbol: "!=", description: _lt("is not equal to") },
             { symbol: "!=", description: _lt("is set"), value: false },
             { symbol: "=", description: _lt("is not set"), value: false },
+            { symbol: "startswith", description: _lt("starts with") },
+            { symbol: "endswith", description: _lt("ends with") },
+            { symbol: "=ilike", description: _lt("matches") },
         ],
         date: [
             { symbol: "=", description: _lt("is equal to") },
