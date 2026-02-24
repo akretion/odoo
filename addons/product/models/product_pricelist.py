@@ -90,32 +90,39 @@ class Pricelist(models.Model):
                 results[product_id][pricelist.id] = price
         return results
 
-    def _compute_price_rule_get_items(self, products_qty_partner, date, uom_id, prod_tmpl_ids, prod_ids, categ_ids):
-        self.ensure_one()
-        # Load all rules
-        self.env['product.pricelist.item'].flush(['price', 'currency_id', 'company_id', 'active'])
-        self.env.cr.execute(
-            """
+    def _rule_params(self, products_qty_partner, date, uom_id, prod_tmpl_ids, prod_ids, categ_ids):
+        return {'prod_tmpl_ids': prod_tmpl_ids, 'prod_ids': prod_ids,
+                'categ_ids': categ_ids, 'pricelist_id': self.id, 'date': date}
+
+    def _rule_query(self):
+        # NOTE: if you change `order by` on that query, make sure it matches
+        # _order from model to avoid inconstencies and undeterministic issues.
+        return """
             SELECT
                 item.id
             FROM
                 product_pricelist_item AS item
             LEFT JOIN product_category AS categ ON item.categ_id = categ.id
             WHERE
-                (item.product_tmpl_id IS NULL OR item.product_tmpl_id = any(%s))
-                AND (item.product_id IS NULL OR item.product_id = any(%s))
-                AND (item.categ_id IS NULL OR item.categ_id = any(%s))
-                AND (item.pricelist_id = %s)
-                AND (item.date_start IS NULL OR item.date_start<=%s)
-                AND (item.date_end IS NULL OR item.date_end>=%s)
+                (item.product_tmpl_id IS NULL OR item.product_tmpl_id = any(%(prod_tmpl_ids)s))
+                AND (item.product_id IS NULL OR item.product_id = any(%(prod_ids)s))
+                AND (item.categ_id IS NULL OR item.categ_id = any(%(categ_ids)s))
+                AND (item.pricelist_id = %(pricelist_id)s)
+                AND (item.date_start IS NULL OR item.date_start<=%(date)s)
+                AND (item.date_end IS NULL OR item.date_end>=%(date)s)
                 AND (item.active = TRUE)
-            ORDER BY
-                item.applied_on, item.min_quantity desc, categ.complete_name desc, item.id desc
-            """,
-            (prod_tmpl_ids, prod_ids, categ_ids, self.id, date, date))
-        # NOTE: if you change `order by` on that query, make sure it matches
-        # _order from model to avoid inconstencies and undeterministic issues.
+            ORDER BY item.applied_on, item.min_quantity desc, categ.complete_name desc, item.id desc
+        """
 
+    def _compute_price_rule_get_items(self, products_qty_partner, date, uom_id, prod_tmpl_ids, prod_ids, categ_ids):
+        self.ensure_one()
+        # Load all rules
+        self.env['product.pricelist.item'].flush(['price', 'currency_id', 'company_id', 'active'])
+
+
+        query = self._rule_query()
+        params = self._rule_params(products_qty_partner, date, uom_id, prod_tmpl_ids, prod_ids, categ_ids)
+        self.env.cr.execute(query, params)
         item_ids = [x[0] for x in self.env.cr.fetchall()]
         return self.env['product.pricelist.item'].browse(item_ids)
 
@@ -161,7 +168,6 @@ class Pricelist(models.Model):
         else:
             prod_ids = [product.id for product in products]
             prod_tmpl_ids = [product.product_tmpl_id.id for product in products]
-
         items = self._compute_price_rule_get_items(products_qty_partner, date, uom_id, prod_tmpl_ids, prod_ids, categ_ids)
 
         results = {}
@@ -210,6 +216,9 @@ class Pricelist(models.Model):
                         cat = cat.parent_id
                     if not cat:
                         continue
+
+                if rule.brand_id and product.brand_id != rule.brand_id:
+                    continue
 
                 if rule.base == 'pricelist' and rule.base_pricelist_id:
                     price = rule.base_pricelist_id._compute_price_rule([(product, qty, partner)], date, uom_id)[product.id][0]  # TDE: 0 = price, 1 = rule
