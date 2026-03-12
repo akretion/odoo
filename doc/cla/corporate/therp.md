@@ -8,7 +8,7 @@ Updated:
     2025-03-06
     2025-10-07
 
-Therp BV agrees to the terms of the Odoo Corporate 
+Therp BV agrees to the terms of the Odoo Corporate
 Contributor License Agreement v1.0.
 
 We declare that we are authorized and able to make this agreement and sign
@@ -32,3 +32,4 @@ List of contributors:
 *  Gijs-Jan Otten gjotten@therp.nl https://github.com/gjotten
 *  Dan Kiplangat dkiplangat@therp.nl https://github.com/kiplangatdan
 *  Kevin Kahumba kkahumba@therp.nl https://github.com/kkamaa
+*  Dan Kiplangat dkiplangat@therp.nl https://github.com/Kiplangatdan
