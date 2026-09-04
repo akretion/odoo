@@ -492,7 +492,10 @@ class ProductProduct(models.Model):
             sellers = self.env['product.supplierinfo'].sudo().browse(self.env.context.get('seller_id')) or []
             if not sellers and partner_ids:
                 product_supplier_info = supplier_info_by_template.get(product.product_tmpl_id, [])
-                sellers = [x for x in product_supplier_info if self._is_valid_seller(x, x.name, None, fields.Date.today(), False, False)]
+                sellers = [
+                    x for x in product_supplier_info
+                    if self._seller_matches_criteria(x, x.name, None, fields.Date.today(), False)
+                ]
                 # Filter out sellers based on the company. This is done afterwards for a better
                 # code readability. At this point, only a few sellers should remain, so it should
                 # not be a performance issue.
@@ -607,46 +610,53 @@ class ProductProduct(models.Model):
     def _prepare_sellers(self, params=False):
         return self.seller_ids.filtered(lambda s: s.name.active).sorted(lambda s: (s.sequence, -s.min_qty, s.price, s.id))
 
-    def _is_valid_seller(self, seller, partner, quantity, date, uom, valid_sellers):
-        # Set quantity in UoM of seller
+    def _seller_matches_criteria(self, seller, partner_id=False, quantity=0.0, date=None, uom_id=False):
+        if date is None:
+            date = fields.Date.context_today(self)
+        precision = self.env['decimal.precision'].precision_get('Product Unit of Measure')
+
         quantity_uom_seller = quantity
-        if quantity_uom_seller and uom and uom != seller.product_uom:
-            quantity_uom_seller = uom._compute_quantity(quantity_uom_seller, seller.product_uom)
+        if quantity_uom_seller and uom_id and uom_id != seller.product_uom:
+            quantity_uom_seller = uom_id._compute_quantity(quantity_uom_seller, seller.product_uom)
 
         if seller.date_start and seller.date_start > date:
             return False
         if seller.date_end and seller.date_end < date:
             return False
-        if partner and seller.name not in [partner, partner.parent_id]:
+        if partner_id and seller.name not in [partner_id, partner_id.parent_id]:
             return False
-        precision = self.env['decimal.precision'].precision_get('Product Unit of Measure')
         if quantity is not None and float_compare(quantity_uom_seller, seller.min_qty, precision_digits=precision) == -1:
             return False
         if seller.product_id and seller.product_id != self:
             return False
-        if valid_sellers and valid_sellers.name != seller.name:
-            return False
         return True
 
-    def _select_sellers(self, partner_id=False, quantity=0.0, date=None, uom_id=False, params=False):
+    def _get_filtered_sellers(self, partner_id=False, quantity=0.0, date=None, uom_id=False, params=False):
+        # Backport of the native Odoo 15.0 method (odoo/odoo#128077)
+        self.ensure_one()
+        sellers_filtered = self._prepare_sellers(params)
+        sellers_filtered = sellers_filtered.filtered(lambda s: not s.company_id or s.company_id.id == self.env.company.id)
+        sellers = self.env['product.supplierinfo']
+        for seller in sellers_filtered:
+            if self._seller_matches_criteria(seller, partner_id, quantity, date, uom_id):
+                sellers |= seller
+        return sellers
+
+    def _group_sellers_by_name(self, sellers):
         res = self.env['product.supplierinfo']
-        if date is None:
-            date = fields.Date.context_today(self)
-        sellers = self._prepare_sellers(params)
-        sellers = sellers.filtered(lambda s: not s.company_id or s.company_id.id == self.env.company.id)
         for seller in sellers:
-            if self._is_valid_seller(seller, partner_id, quantity, date, uom_id, res):
+            if not res or res.name == seller.name:
                 res |= seller
         return res
 
     def _select_seller(self, partner_id=False, quantity=0.0, date=None, uom_id=False, params=False):
-        self.ensure_one()
-        res = self._select_sellers(partner_id, quantity, date, uom_id, params)
-        return res.sorted('price')[:1]
+        sellers = self._get_filtered_sellers(partner_id=partner_id, quantity=quantity, date=date, uom_id=uom_id, params=params)
+        res = self._group_sellers_by_name(sellers)
+        return res and res.sorted('price')[:1]
 
     def _select_seller_per_qty(self, partner_id=False, quantity=0.0, date=None, uom_id=False, params=False):
-        self.ensure_one()
-        res = self._select_sellers(partner_id, quantity, date, uom_id, params)
+        sellers = self._get_filtered_sellers(partner_id=partner_id, quantity=quantity, date=date, uom_id=uom_id, params=params)
+        res = self._group_sellers_by_name(sellers)
         return res.sorted('min_qty')
 
     def price_compute(self, price_type, uom=False, currency=False, company=None):
