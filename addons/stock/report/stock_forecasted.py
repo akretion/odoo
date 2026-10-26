@@ -83,10 +83,7 @@ class StockForecasted(models.AbstractModel):
             })
 
         res['uom'] = products[:1].uom_id.display_name
-        res['quantity_on_hand'] = sum(products.mapped('qty_available'))
-        res['virtual_available'] = sum(products.mapped('virtual_available'))
-        res['incoming_qty'] = sum(products.mapped('incoming_qty'))
-        res['outgoing_qty'] = sum(products.mapped('outgoing_qty'))
+        res.update(self._get_report_header_quantities(products, wh_location_ids))
 
         in_domain, out_domain = self._move_draft_domain(product_template_ids, product_ids, wh_location_ids)
         [in_sum] = self.env['stock.move']._read_group(in_domain, aggregates=['product_qty:sum'])[0]
@@ -104,6 +101,15 @@ class StockForecasted(models.AbstractModel):
         })
         return res
 
+    def _get_report_header_quantities(self, products, wh_location_ids):
+        """Quantities displayed in the header of the report."""
+        return {
+            'quantity_on_hand': sum(products.mapped('qty_available')),
+            'virtual_available': sum(products.mapped('virtual_available')),
+            'incoming_qty': sum(products.mapped('incoming_qty')),
+            'outgoing_qty': sum(products.mapped('outgoing_qty')),
+        }
+
     def _get_reservation_data(self, move):
         return {
             '_name': move.picking_id._name,
@@ -111,11 +117,17 @@ class StockForecasted(models.AbstractModel):
             'id': move.picking_id.id
         }
 
+    def _get_report_warehouse(self):
+        return (
+            self.env['stock.warehouse'].browse(self.env['stock.warehouse']._get_warehouse_id_from_context())
+            or self.env['stock.warehouse'].search([['active', '=', True]])[0]
+        )
+
     def _get_report_data(self, product_template_ids=False, product_ids=False):
         assert product_template_ids or product_ids
         res = {}
 
-        warehouse = self.env['stock.warehouse'].browse(self.env['stock.warehouse']._get_warehouse_id_from_context()) or self.env['stock.warehouse'].search([['active', '=', True]])[0]
+        warehouse = self._get_report_warehouse()
         wh_location_ids = [loc['id'] for loc in self.env['stock.location'].search_read(
             [('id', 'child_of', warehouse.view_location_id.id)],
             ['id'],
@@ -187,12 +199,112 @@ class StockForecasted(models.AbstractModel):
     def _get_report_moves_fields(self):
         return ['id', 'date']
 
+    def _prepare_report_line_at(self, quantity, location_id=False, **kwargs):
+        """Report line of ``quantity`` taken from / left in ``location_id``.
+
+        The native report only displays six quantities, hence no location: a
+        module which splits the report per location passes the ``location_id``
+        of each line, which the client then displays.
+        """
+        line = self._prepare_report_line(quantity, **kwargs)
+        if location_id:
+            location = self.env['stock.location'].browse(location_id)
+            line['location'] = {
+                'id': location.id,
+                'display_name': location.display_name,
+            }
+        return line
+
+    # ------------------------------------------------------------------
+    # Stock considered by the report, and how the demands consume it. A
+    # module can override these small methods to change the perimeter of
+    # the stock (per location, per typology, ...) without copying
+    # ``_get_report_lines``: ``_get_report_scope`` is called once per report
+    # and passed to every other method, which return a
+    # ``{location_id: quantity}`` breakdown of what they consumed, ``False``
+    # standing for "no location to display".
+    # ------------------------------------------------------------------
+    def _get_report_scope(self, wh_location_ids, wh_stock_location):
+        """Perimeter of the stock the report works with."""
+        return {
+            'wh_location_ids': wh_location_ids,
+            'wh_stock_location': wh_stock_location,
+        }
+
+    def _get_report_stock(self, product_ids, scope):
+        """Stock on hand the report works with: ``{(product_id, location_id): qty}``.
+
+        By default every quantity of the ``wh_stock_location`` sub-tree is
+        merged into ``wh_stock_location`` (the "free stock" of the report),
+        the rest of the warehouse being stock in transit.
+        """
+        wh_location_ids = scope['wh_location_ids']
+        wh_stock_location = scope['wh_stock_location']
+        qties = self.env['stock.quant']._read_group(
+            [('location_id', 'in', wh_location_ids), ('quantity', '>', 0), ('product_id', 'in', product_ids)],
+            ['product_id', 'location_id'], ['quantity:sum'])
+        wh_stock_sub_location_ids = set(
+            wh_stock_location.search([('id', 'child_of', wh_stock_location.id)])._ids
+        )
+        stock = defaultdict(float)
+        for product, location, quantity in qties:
+            location_id = location.id
+            # any sublocation qties will be added to the main stock location qty
+            if location_id in wh_stock_sub_location_ids:
+                location_id = wh_stock_location.id
+            stock[(product.id, location_id)] += quantity
+        return stock
+
+    def _get_report_free_stock(self, product, stock, scope):
+        """``(free stock, stock in transit)`` of the product, after the reservations."""
+        wh_stock_location = scope['wh_stock_location']
+        free_stock = stock.get((product.id, wh_stock_location.id), 0.0)
+        product_sum = sum(
+            quantity
+            for (product_id, _location_id), quantity in stock.items()
+            if product_id == product.id
+        )
+        return free_stock, product_sum - free_stock
+
+    def _get_move_available_stock(self, out, move, stock, scope):
+        """Stock available for ``move``, before the chained moves are considered."""
+        return stock.get((out.product_id.id, move.location_id.id), 0.0)
+
+    def _get_reserved_stock(self, out, move, quantity, stock, scope):
+        """Split of the ``quantity`` reserved by ``move``, debited from ``stock``."""
+        location_id = move.location_id.id
+        stock[(out.product_id.id, location_id)] -= quantity
+        return {False: quantity}
+
+    def _take_stock(self, out, move, quantity, stock, scope):
+        """Take up to ``quantity`` of stock for ``move``, debited from ``stock``."""
+        location_id = move.location_id.id
+        taken = min(quantity, stock.get((out.product_id.id, location_id), 0.0))
+        if taken <= 0:
+            return {}
+        stock[(out.product_id.id, location_id)] -= taken
+        return {False: taken}
+
+    def _take_transit_stock(self, out, quantity, stock, scope):
+        """Take up to ``quantity`` from the stock which cannot be reserved."""
+        return {False: quantity}
+
+    def _get_report_free_stock_lines(self, product, stock, scope, free_stock, transit_stock, read=True):
+        """Lines of the stock which no demand took."""
+        lines = []
+        if not float_is_zero(transit_stock, precision_rounding=product.uom_id.rounding):
+            lines.append(self._prepare_report_line(transit_stock, product=product, in_transit=True, read=read))
+        if not float_is_zero(free_stock, precision_rounding=product.uom_id.rounding):
+            lines.append(self._prepare_report_line(free_stock, product=product, read=read))
+        return lines
+
     def _get_report_lines(self, product_template_ids, product_ids, wh_location_ids, wh_stock_location, read=True):
 
-        def _get_out_move_reserved_data(out, linked_moves, used_reserved_moves, currents):
+        def _get_out_move_reserved_data(out, linked_moves, used_reserved_moves, stock, scope):
             reserved_out = 0
             # the move to show when qty is reserved
             reserved_move = self.env['stock.move']
+            reserved_breakdown = defaultdict(float)
             for move in linked_moves:
                 if move.state not in ('partially_available', 'assigned'):
                     continue
@@ -205,21 +317,25 @@ class StockForecasted(models.AbstractModel):
                 # add to reserved line data
                 reserved_out += reserved
                 used_reserved_moves[move] += reserved
-                currents[(out.product_id.id, move.location_id.id)] -= reserved
+                if reserved:
+                    for location_id, quantity in self._get_reserved_stock(out, move, reserved, stock, scope).items():
+                        reserved_breakdown[location_id] += quantity
                 if float_compare(reserved_out, out.product_qty, precision_rounding=move.product_id.uom_id.rounding) >= 0:
                     break
 
             return {
                 'reserved': reserved_out,
                 'reserved_move': reserved_move,
+                'reserved_breakdown': reserved_breakdown,
                 'linked_moves': linked_moves,
             }
 
-        def _get_out_move_taken_from_stock_data(out, currents, reserved_data):
+        def _get_out_move_taken_from_stock_data(out, stock, reserved_data, scope):
             reserved_out = reserved_data['reserved']
             demand_out = out.product_qty - reserved_out
             linked_moves = reserved_data['linked_moves']
             taken_from_stock_out = 0
+            taken_breakdown = defaultdict(float)
             for move in linked_moves:
                 if move.state in ('draft', 'cancel', 'assigned', 'done'):
                     continue
@@ -236,16 +352,19 @@ class StockForecasted(models.AbstractModel):
                     move_out_qty = sum(sibling_moves.filtered(lambda m: m.state == 'done').mapped('quantity'))
                     move_available_qty = move_in_qty - move_out_qty - reserved
                 else:
-                    move_available_qty = currents[(out.product_id.id, move.location_id.id)]
+                    move_available_qty = self._get_move_available_stock(out, move, stock, scope)
                 # count taken from stock, but avoid taking more than whats in stock in case of move origs,
                 # this can happen if stock adjustment is done after orig moves are done
-                taken_from_stock = min(demand, move_available_qty, currents[(out.product_id.id, move.location_id.id)])
+                taken = self._take_stock(out, move, min(demand, move_available_qty), stock, scope)
+                taken_from_stock = sum(taken.values())
                 if taken_from_stock > 0:
-                    currents[(out.product_id.id, move.location_id.id)] -= taken_from_stock
                     taken_from_stock_out += taken_from_stock
-                demand_out -= taken_from_stock
+                    demand_out -= taken_from_stock
+                    for location_id, quantity in taken.items():
+                        taken_breakdown[location_id] += quantity
             return {
                 'taken_from_stock': taken_from_stock_out,
+                'taken_breakdown': taken_breakdown,
             }
 
         def _reconcile_out_with_ins(lines, out, ins, demand, product_rounding, in_id_to_in_data, ins_per_product, dest_ids_to_in_ids, read=True):
@@ -257,7 +376,7 @@ class StockForecasted(models.AbstractModel):
                     continue
                 taken_from_in = min(demand, in_data['qty'])
                 demand -= taken_from_in
-                lines.append(self._prepare_report_line(taken_from_in, move_in=in_data['move'], move_out=out, read=read))
+                lines.append(self._prepare_report_line_at(taken_from_in, False, move_in=in_data['move'], move_out=out, read=read))
                 in_data['qty'] -= taken_from_in
                 if in_data['qty'] <= 0:
                     ins_to_remove.append(in_id)
@@ -328,18 +447,8 @@ class StockForecasted(models.AbstractModel):
             for dest in in_id_to_in_data[in_.id]['move_dests']:
                 dest_ids_to_in_ids[dest].add(in_.id)
 
-        qties = self.env['stock.quant']._read_group([('location_id', 'in', wh_location_ids), ('quantity', '>', 0), ('product_id', 'in', outs.product_id.ids)],
-                                                    ['product_id', 'location_id'], ['quantity:sum'])
-        wh_stock_sub_location_ids = set(
-            wh_stock_location.search([('id', 'child_of', wh_stock_location.id)])._ids
-        )
-        currents = defaultdict(float)
-        for product, location, quantity in qties:
-            location_id = location.id
-            # any sublocation qties will be added to the main stock location qty
-            if location_id in wh_stock_sub_location_ids:
-                location_id = wh_stock_location.id
-            currents[(product.id, location_id)] += quantity
+        scope = self._get_report_scope(wh_location_ids, wh_stock_location)
+        stock = self._get_report_stock(outs.product_id.ids, scope)
         moves_data = {}
         for _, out_moves in outs_per_product.items():
             # to handle multiple out wtih same in (ex: same pick/pack for 2 outs)
@@ -347,22 +456,18 @@ class StockForecasted(models.AbstractModel):
             # for all out moves, check for linked moves and count reserved quantity
             for out in out_moves:
                 moves_data[out] = _get_out_move_reserved_data(
-                    out, linked_moves_per_out[out], used_reserved_moves, currents
+                    out, linked_moves_per_out[out], used_reserved_moves, stock, scope
                 )
             # another loop to remove qty from current stock after reserved is counted for
             for out in out_moves:
-                data = _get_out_move_taken_from_stock_data(out, currents, moves_data[out])
+                data = _get_out_move_taken_from_stock_data(out, stock, moves_data[out], scope)
                 moves_data[out].update(data)
-        product_sum = defaultdict(float)
-        for product_loc, quantity in currents.items():
-            product_sum[product_loc[0]] += quantity
         lines = []
         for product in (ins | outs).product_id:
             product_rounding = product.uom_id.rounding
             unreconciled_outs = []
             # remaining stock
-            free_stock = currents[product.id, wh_stock_location.id]
-            transit_stock = product_sum[product.id] - free_stock
+            free_stock, transit_stock = self._get_report_free_stock(product, stock, scope)
             # add report lines and see if remaining demand can be reconciled by unreservable stock or ins
             for out in outs_per_product[product.id]:
                 reserved_out = moves_data[out].get('reserved')
@@ -373,7 +478,8 @@ class StockForecasted(models.AbstractModel):
                 if reserved_out > 0:
                     demand_out = max(demand_out - reserved_out, 0)
                     in_transit = bool(reserved_move.move_orig_ids)
-                    lines.append(self._prepare_report_line(reserved_out, move_out=out, reserved_move=reserved_move, in_transit=in_transit, read=read))
+                    for location_id, quantity in moves_data[out]['reserved_breakdown'].items():
+                        lines.append(self._prepare_report_line_at(quantity, location_id, move_out=out, reserved_move=reserved_move, in_transit=in_transit, read=read))
 
                 if float_is_zero(demand_out, precision_rounding=product_rounding):
                     continue
@@ -381,7 +487,8 @@ class StockForecasted(models.AbstractModel):
                 # Reconcile with the current stock.
                 if taken_from_stock_out > 0:
                     demand_out = max(demand_out - taken_from_stock_out, 0)
-                    lines.append(self._prepare_report_line(taken_from_stock_out, move_out=out, read=read))
+                    for location_id, quantity in moves_data[out]['taken_breakdown'].items():
+                        lines.append(self._prepare_report_line_at(quantity, location_id, move_out=out, read=read))
 
                 if float_is_zero(demand_out, precision_rounding=product_rounding):
                     continue
@@ -389,9 +496,12 @@ class StockForecasted(models.AbstractModel):
                 # Reconcile with unreservable stock, quantities that are in stock but not in correct location to reserve from (in transit)
                 unreservable_qty = min(demand_out, transit_stock)
                 if unreservable_qty > 0:
-                    demand_out -= unreservable_qty
-                    transit_stock -= unreservable_qty
-                    lines.append(self._prepare_report_line(unreservable_qty, move_out=out, in_transit=True, read=read))
+                    transit_breakdown = self._take_transit_stock(out, unreservable_qty, stock, scope)
+                    for location_id, quantity in transit_breakdown.items():
+                        lines.append(self._prepare_report_line_at(quantity, location_id, move_out=out, in_transit=True, read=read))
+                    taken_from_transit = sum(transit_breakdown.values())
+                    demand_out -= taken_from_transit
+                    transit_stock -= taken_from_transit
 
                 if float_is_zero(demand_out, precision_rounding=product_rounding):
                     continue
@@ -407,20 +517,17 @@ class StockForecasted(models.AbstractModel):
                 demand = _reconcile_out_with_ins(lines, out, ins_per_product[product.id], demand, product_rounding, in_id_to_in_data, ins_per_product, dest_ids_to_in_ids, read=read)
                 if not float_is_zero(demand, precision_rounding=product_rounding):
                     # Not reconciled
-                    lines.append(self._prepare_report_line(demand, move_out=out, replenishment_filled=False, read=read))
-            # Stock in transit
-            if not float_is_zero(transit_stock, precision_rounding=product_rounding):
-                lines.append(self._prepare_report_line(transit_stock, product=product, in_transit=True, read=read))
-
-            # Unused remaining stock.
-            if not float_is_zero(free_stock, precision_rounding=product_rounding):
-                lines.append(self._prepare_report_line(free_stock, product=product, read=read))
+                    lines.append(self._prepare_report_line_at(demand, False, move_out=out, replenishment_filled=False, read=read))
+            # Stock in transit and unused remaining stock.
+            lines.extend(self._get_report_free_stock_lines(
+                product, stock, scope, free_stock, transit_stock, read=read
+            ))
             # In moves not used.
             for in_id in ins_per_product[product.id]:
                 in_data = in_id_to_in_data[in_id]
                 if float_is_zero(in_data['qty'], precision_rounding=product_rounding):
                     continue
-                lines.append(self._prepare_report_line(in_data['qty'], move_in=in_data['move'], read=read))
+                lines.append(self._prepare_report_line_at(in_data['qty'], False, move_in=in_data['move'], read=read))
         return lines
 
     @api.model
